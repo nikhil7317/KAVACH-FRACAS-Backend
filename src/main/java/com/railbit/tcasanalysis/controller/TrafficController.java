@@ -5,10 +5,6 @@ import com.railbit.tcasanalysis.DTO.TrafficReportResponse;
 import com.railbit.tcasanalysis.service.RrdToolService;
 
 import org.springframework.web.bind.annotation.*;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-
-import javax.sql.DataSource;
 
 @RestController
 @CrossOrigin("*")
@@ -21,35 +17,28 @@ public class TrafficController {
         this.rrdToolService = rrdToolService;
     }
 
-    // ============================
-    // TEST CACTI DATASOURCE HERE
-    // ============================
-
-    @Autowired
-    @Qualifier("cactiDataSource")
-    private DataSource cactiDS;
-
-    @GetMapping("/check-cacti-url")
-    public String checkCactiURL() throws Exception {
-        return cactiDS.getConnection().getMetaData().getURL();
-    }
-
-    // ============================
-    // ORIGINAL ENDPOINTS
-    // ============================
-
     @GetMapping("/{filename}")
-    public TrafficData getTraffic(@PathVariable String filename) throws Exception {
+    public TrafficData getTraffic(
+            @PathVariable String filename,
+            @RequestParam(required = false) Long startDate,
+            @RequestParam(required = false) Long endDate
+    ) throws Exception {
+
         String rrdPath = "C:/xampp/htdocs/cacti/rra/" + filename + ".rrd";
-        return rrdToolService.fetchTraffic(rrdPath);
+        return rrdToolService.fetchTraffic(rrdPath, startDate, endDate);
     }
+
 
     @GetMapping("/report/{filename}/{deviceId}")
     public TrafficReportResponse getFullReport(
             @PathVariable String filename,
-            @PathVariable Integer deviceId
+            @PathVariable Integer deviceId,
+            @RequestParam(required = false) Long startDate,
+            @RequestParam(required = false) Long endDate
     ) throws Exception {
+
         String rrdPath = "C:/xampp/htdocs/cacti/rra/" + filename + ".rrd";
-        return rrdToolService.fetchFullReport(rrdPath, deviceId);
+        return rrdToolService.fetchFullReport(rrdPath, deviceId, startDate, endDate);
     }
+
 }
