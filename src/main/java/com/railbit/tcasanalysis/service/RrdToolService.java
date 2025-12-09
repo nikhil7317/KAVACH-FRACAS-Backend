@@ -1,16 +1,15 @@
 package com.railbit.tcasanalysis.service;
 
 import com.railbit.tcasanalysis.DTO.*;
-
 import com.railbit.tcasanalysis.cactiRepo.CactiHostRepository;
 import com.railbit.tcasanalysis.entity.cactiEntity.CactiHost;
-
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.time.ZonedDateTime;
 import java.util.*;
+import java.util.function.DoubleUnaryOperator;
 import java.util.stream.Collectors;
 
 @Service
@@ -22,19 +21,16 @@ public class RrdToolService {
         this.cactiRepo = cactiRepo;
     }
 
-
+    // --- Traffic fetch / rrd parsing logic (unchanged, only minor refactors) ---
     public TrafficData fetchTraffic(String rrdFilePath, Long startDate, Long endDate) throws Exception {
 
-        // 💡 FIX: Make dsNames a member of a new enclosing class or scope object
-        // to allow the inner Parser class to modify it without the 'final' constraint.
         final class TrafficContext {
             List<Long> timestamps = new ArrayList<>();
             List<List<Double>> values = new ArrayList<>();
-            List<String> dsNames = new ArrayList<>(); // Now a mutable field
+            List<String> dsNames = new ArrayList<>();
         }
         TrafficContext ctx = new TrafficContext();
 
-        // Helper to run external command and return stdout lines
         class Exec {
             List<String> run(String cmd) throws Exception {
                 Process p = Runtime.getRuntime().exec(cmd);
@@ -47,14 +43,11 @@ public class RrdToolService {
         }
         Exec exec = new Exec();
 
-        // --- Helper for parsing rrdtool output ---
         final class Parser {
-            // Returns true if DS names were set from header
             boolean parse(List<String> out, boolean allowEmpty) {
                 boolean headerFound = false;
                 for (String line : out.stream().map(String::trim).filter(l -> !l.isEmpty()).collect(Collectors.toList())) {
                     if (line.contains(":")) {
-                        // ... parsing logic remains the same, but now uses ctx ...
                         String[] parts = line.split(":");
                         try {
                             long tsSec = Long.parseLong(parts[0].trim());
@@ -64,7 +57,6 @@ public class RrdToolService {
                                     .map(v -> v.equals("nan") ? null : Double.parseDouble(v))
                                     .collect(Collectors.toList());
 
-                            // ⚠️ Accessing and modifying ctx.dsNames
                             if (!ctx.dsNames.isEmpty() && row.size() < ctx.dsNames.size()) {
                                 while (row.size() < ctx.dsNames.size()) row.add(null);
                             }
@@ -73,10 +65,9 @@ public class RrdToolService {
                                 ctx.timestamps.add(tsMs);
                                 ctx.values.add(row);
                             }
-                        } catch (NumberFormatException ignored) {}
+                        } catch (NumberFormatException ignored) {
+                        }
                     } else if (!headerFound) {
-                        // ⚠️ This is the line that caused the original error, now fixed:
-                        // Reassignment is valid on a mutable field of an outer class/scope object.
                         ctx.dsNames = Arrays.asList(line.split("\\s+"));
                         headerFound = true;
                     }
@@ -86,9 +77,7 @@ public class RrdToolService {
         }
         Parser parser = new Parser();
 
-        // --- Rest of the logic ---
-
-        // ---------- DEFAULT: show only SAME-DAY realtime data ----------
+        // Default: same-day realtime data
         if (startDate == null && endDate == null) {
             long nowSec = System.currentTimeMillis() / 1000L;
             long startOfDaySec = ZonedDateTime.now().toLocalDate().atStartOfDay(ZonedDateTime.now().getZone()).toEpochSecond();
@@ -105,13 +94,11 @@ public class RrdToolService {
             return d;
         }
 
-        // ---------- RANGE REQUEST: use XPORT (Cacti-like behavior) ----------
+        // Range request: XPORT like Cacti
         long s = (startDate == null) ? (System.currentTimeMillis() / 1000L - 7 * 86400L) : (startDate > 10000000000L ? startDate / 1000 : startDate);
         long e = (endDate == null) ? (System.currentTimeMillis() / 1000L) : (endDate > 10000000000L ? endDate / 1000 : endDate);
 
-        // Discover DS names via a quick header probe (fallback)
         try {
-            // ... (Probe logic using ctx.dsNames for list check)
             String probeCmd = String.format("\"C:\\rrdtool\\rrdtool.exe\" fetch \"%s\" AVERAGE --resolution 300 --start %d --end %d",
                     rrdFilePath, Math.max(s - 10, s), Math.min(e + 10, e));
 
@@ -122,12 +109,10 @@ public class RrdToolService {
             }
         } catch (Exception ignored) { /* continue — we'll still try xport */ }
 
-        // If DS names still unknown, fallback to common traffic DS names
         if (ctx.dsNames.isEmpty()) {
             ctx.dsNames = Arrays.asList("traffic_in", "traffic_out");
         }
 
-        // Build DEF and XPORT arguments dynamically
         String defArgs = ctx.dsNames.stream()
                 .map(ds -> String.format("DEF:ds%d=\"%s\":%s:AVERAGE", ctx.dsNames.indexOf(ds), rrdFilePath, ds))
                 .collect(Collectors.joining(" "));
@@ -138,10 +123,8 @@ public class RrdToolService {
         String xportCmd = String.format("\"C:\\rrdtool\\rrdtool.exe\" xport --start %d --end %d %s %s",
                 s, e, defArgs, xportArgs);
 
-        // Parse xport output
         parser.parse(exec.run(xportCmd), false);
 
-        // If xport produced nothing, fallback
         if (ctx.timestamps.isEmpty()) {
             String fallbackCmd = String.format("\"C:\\rrdtool\\rrdtool.exe\" fetch \"%s\" AVERAGE --resolution 1800 --start %d --end %d",
                     rrdFilePath, s, e);
@@ -155,8 +138,6 @@ public class RrdToolService {
         return d;
     }
 
-
-
     private Integer getPollingInterval(String path) {
         try {
             String cmd = "\"C:\\rrdtool\\rrdtool.exe\" info \"" + path + "\"";
@@ -168,23 +149,23 @@ public class RrdToolService {
                     return Integer.parseInt(l.split("=")[1].trim());
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
         return 300;
     }
 
+    // --- Main report builder (uses DS_META for production-grade conversions) ---
     public TrafficReportResponse fetchFullReport(String path, Integer deviceId, Long startDate, Long endDate) throws Exception {
 
         TrafficData t = fetchTraffic(path, startDate, endDate);
 
-        // Apply timestamp filters if provided
+        // timestamp filtering
         if (startDate != null || endDate != null) {
             List<Long> filteredTs = new ArrayList<>();
             List<List<Double>> filteredValues = new ArrayList<>();
 
             for (int i = 0; i < t.getTimestamps().size(); i++) {
                 long ts = t.getTimestamps().get(i);
-
-                // Conditions
                 boolean afterStart = (startDate == null || ts >= startDate);
                 boolean beforeEnd = (endDate == null || ts <= endDate);
 
@@ -208,18 +189,19 @@ public class RrdToolService {
             res.setCactiHost(wrapper);
         }
 
-        // Set final timestamps after filtering
+        // Set timestamps
         if (!t.getTimestamps().isEmpty()) {
             res.setFromTimestamp(t.getTimestamps().get(0));
-            res.setToTimestamp(t.getTimestamps().get(t.getTimestamps().size()-1));
+            res.setToTimestamp(t.getTimestamps().get(t.getTimestamps().size() - 1));
         }
 
         res.setPollingIntervalSeconds(getPollingInterval(path));
 
-        // Compute report stats
+        // Compute report stats using DS_META converters
         List<ReportData> list = new ArrayList<>();
 
         for (int i = 0; i < t.getDsNames().size(); i++) {
+            String ds = t.getDsNames().get(i);
             List<Double> col = new ArrayList<>();
             for (List<Double> row : t.getValues()) {
                 Double v = row.get(i);
@@ -228,18 +210,132 @@ public class RrdToolService {
 
             if (col.isEmpty()) continue;
 
+            // find metadata match by substring (first match)
+            DsMeta meta = DS_META.entrySet().stream()
+                    .filter(e -> ds.toLowerCase().contains(e.getKey()))
+                    .map(Map.Entry::getValue)
+                    .findFirst()
+                    .orElse(null);
+
+            if (meta == null) {
+                // fallback to detectUnit and identity converter
+                String fallbackUnit = detectUnit(ds);
+                meta = new DsMeta(fallbackUnit, v -> v);
+            }
+
             ReportData rd = new ReportData();
-            rd.setDataSourceName(t.getDsNames().get(i));
-            rd.setCurrentValue(col.get(col.size() - 1));
-            rd.setMinValue(Collections.min(col));
-            rd.setMaxValue(Collections.max(col));
-            rd.setAvgValue(col.stream().mapToDouble(d -> d).average().orElse(0));
+            rd.setDataSourceName(ds);
+
+            // apply converter (current/min/max/avg)
+            double rawCurrent = col.get(col.size() - 1);
+            double rawMin = Collections.min(col);
+            double rawMax = Collections.max(col);
+            double rawAvg = col.stream().mapToDouble(d -> d).average().orElse(0);
+
+            double current = safeApply(meta.converter, rawCurrent);
+            double min = safeApply(meta.converter, rawMin);
+            double max = safeApply(meta.converter, rawMax);
+            double avg = safeApply(meta.converter, rawAvg);
+
+            rd.setCurrentValue(round4(current));
+            rd.setMinValue(round4(min));
+            rd.setMaxValue(round4(max));
+            rd.setAvgValue(round4(avg));
+
+            rd.setUnit(meta.unit != null ? meta.unit : "Unknown");
 
             list.add(rd);
         }
 
         res.setReports(list);
         return res;
+    }
+
+    // safe apply helper (handles NaN / infinite)
+    private static double safeApply(DoubleUnaryOperator op, double v) {
+        try {
+            double r = op.applyAsDouble(v);
+            if (Double.isNaN(r) || Double.isInfinite(r)) return 0.0;
+            return r;
+        } catch (Exception ex) {
+            return 0.0;
+        }
+    }
+
+    private String detectUnit(String dsName) {
+        String ds = dsName.toLowerCase();
+
+        // Traffic graphs
+        if (ds.contains("traffic") || ds.endsWith("_in") || ds.endsWith("_out")) {
+            return "bps";
+        }
+
+        // Uptime
+        if (ds.contains("uptime")) {
+            return "minutes";
+        }
+
+        // Polling time (from Cacti poller stats)
+        if (ds.contains("polling_time") || ds.contains("polling") || ds.contains("ping_time")) {
+            return "seconds";
+        }
+
+        // Voltage
+        if (ds.contains("volt") || ds.contains("voltage")) {
+            return "Volt";
+        }
+
+        // Current / Amps
+        if (ds.contains("amp") || ds.contains("current")) {
+            return "Ampere";
+        }
+
+        // Temperature
+        if (ds.contains("temp")) {
+            return "°C";
+        }
+
+        return "Unknown";
+    }
+
+    private double round4(double v) {
+        return Math.round(v * 10000.0) / 10000.0;
+    }
+
+    // ---------- DS metadata map & helper class ----------
+    private static final Map<String, DsMeta> DS_META = new LinkedHashMap<>();
+
+    static {
+        // key = substring to match inside DS name (lowercase)
+        // uptime: centiseconds -> seconds -> minutes
+        DS_META.put("uptime", new DsMeta("minutes", v -> (v * 0.01) / 60.0));
+
+        // polling_time and variants are already in seconds
+        DS_META.put("polling_time", new DsMeta("seconds", v -> v));
+        DS_META.put("polling", new DsMeta("seconds", v -> v));
+
+        // traffic: bps (we keep raw value here, UI can autoscale to Kbps/Mbps)
+        DS_META.put("traffic_in", new DsMeta("bps", v -> v));
+        DS_META.put("traffic_out", new DsMeta("bps", v -> v));
+        DS_META.put("traffic", new DsMeta("bps", v -> v));
+
+        // typical sensors
+        DS_META.put("volt", new DsMeta("Volt", v -> v));
+        DS_META.put("voltage", new DsMeta("Volt", v -> v));
+        DS_META.put("amp", new DsMeta("Ampere", v -> v));
+        DS_META.put("current", new DsMeta("Ampere", v -> v));
+        DS_META.put("temp", new DsMeta("°C", v -> v));
+        DS_META.put("temperature", new DsMeta("°C", v -> v));
+    }
+
+    private static class DsMeta {
+        String unit;
+        DoubleUnaryOperator converter;
+
+        public DsMeta(String unit, DoubleUnaryOperator converter) {
+            this.unit = unit;
+            this.converter = converter;
+        }
     }
 
 }

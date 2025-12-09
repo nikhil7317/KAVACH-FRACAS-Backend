@@ -9,5 +9,6 @@ public class ReportData {
     private Double minValue;
     private Double maxValue;
     private Double avgValue;
+    private String unit;
 }
 
