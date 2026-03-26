@@ -28,7 +28,7 @@ public class MainDBConfig {
 
         return builder
                 .dataSource(dataSource)
-                .packages("com.railbit.tcasanalysis.entity")   // your main DB entities
+                .packages("com.railbit.tcasanalysis") // ✅ FIXED
                 .persistenceUnit("main")
                 .build();
     }

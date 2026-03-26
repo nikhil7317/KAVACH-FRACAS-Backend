@@ -2,7 +2,7 @@ package com.railbit.tcasanalysis.repository;
 
 import com.railbit.tcasanalysis.DTO.NMSStationStatusDTO;
 import com.railbit.tcasanalysis.entity.nmspackets.FaultPacket;
-import com.railbit.tcasanalysis.entity.nmspackets.stationarypackets.StationaryPacket;
+import com.railbit.tcasanalysis.entity.StationaryPacket;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.data.domain.Pageable;

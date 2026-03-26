@@ -2,7 +2,7 @@ package com.railbit.tcasanalysis.service.serviceImpl;
 
 import com.railbit.tcasanalysis.DTO.FaultCodeCountDTO;
 import com.railbit.tcasanalysis.entity.Station;
-import com.railbit.tcasanalysis.entity.nmspackets.stationarypackets.StationaryPacket;
+import com.railbit.tcasanalysis.entity.StationaryPacket;
 import com.railbit.tcasanalysis.repository.StationaryPacketRepo;
 import com.railbit.tcasanalysis.service.StationService;
 import com.railbit.tcasanalysis.service.StationaryPacketService;
@@ -39,22 +39,22 @@ public class StationaryPacketServiceImpl implements StationaryPacketService {
 
     @Override
     public List<StationaryPacket> get100StationaryPacket() {
-        return setStationData(stationaryPacketRepo.findTop100ByOrderByIdDesc());
+        return null;
     }
 
-    public List<StationaryPacket> setStationData(List<StationaryPacket> stationaryPackets) {
-        List<StationaryPacket> result = new ArrayList<>();
-        for (StationaryPacket stationaryPacket : stationaryPackets) {
-            String stnCode = stationaryPacket.getStnCode();
-            Station station = null;
-            if (!StringUtils.isEmpty(stnCode)) {
-                station = stationService.findByTcassubsysid(Integer.valueOf(stnCode));
-                stationaryPacket.setStation(station);
-            }
-            result.add(stationaryPacket);
-        }
-        return result;
-    }
+//    public List<StationaryPacket> setStationData(List<StationaryPacket> stationaryPackets) {
+//        List<StationaryPacket> result = new ArrayList<>();
+//        for (StationaryPacket stationaryPacket : stationaryPackets) {
+//            String stnCode = stationaryPacket.getStnCode();
+//            Station station = null;
+//            if (!StringUtils.isEmpty(stnCode)) {
+//                station = stationService.findByTcassubsysid(Integer.valueOf(stnCode));
+//                stationaryPacket.setStation(station);
+//            }
+//            result.add(stationaryPacket);
+//        }
+//        return result;
+//    }
 
     @Override
     public String postStationaryPacket(StationaryPacket stationaryPacket) {

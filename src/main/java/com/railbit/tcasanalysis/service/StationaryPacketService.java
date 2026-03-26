@@ -1,6 +1,6 @@
 package com.railbit.tcasanalysis.service;
 
-import com.railbit.tcasanalysis.entity.nmspackets.stationarypackets.StationaryPacket;
+import com.railbit.tcasanalysis.entity.StationaryPacket;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;

@@ -1,7 +1,7 @@
 package com.railbit.tcasanalysis.controller.nmscontrollers;
 
 import com.railbit.tcasanalysis.DTO.ResponseDTO;
-import com.railbit.tcasanalysis.entity.nmspackets.stationarypackets.StationaryPacket;
+import com.railbit.tcasanalysis.entity.StationaryPacket;
 import com.railbit.tcasanalysis.service.StationaryPacketService;
 import com.railbit.tcasanalysis.util.Constants;
 import jakarta.validation.Valid;
