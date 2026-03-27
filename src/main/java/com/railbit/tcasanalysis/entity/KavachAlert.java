@@ -94,6 +94,9 @@ public class KavachAlert {
     @Column(name = "created_at", updatable = false)
     private Date createdAt;
 
+    @Column(name = "last_rfid_tag")
+    private Integer lastRfidTag;
+
     @PrePersist
     protected void onCreate() { createdAt = new Date(); }
 }
