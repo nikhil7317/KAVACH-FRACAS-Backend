@@ -18,19 +18,8 @@ public class StationPacketController {
     @Autowired
     private StationQueryService stationQueryService;
 
-    /**
-     * GET /api/station/packets?fromDate=2026-03-23 14:00:00&toDate=2026-03-23 15:00:00
-     *                         &stnCode=14011&locoId=30191
-     *
-     * Required: fromDate, toDate
-     * Optional: stnCode, locoId
-     *
-     * Examples:
-     *   /api/station/packets?fromDate=2026-03-23 00:00:00&toDate=2026-03-23 23:59:59
-     *   /api/station/packets?fromDate=2026-03-23 08:00:00&toDate=2026-03-23 09:00:00&stnCode=14011
-     *   /api/station/packets?fromDate=2026-03-23 08:00:00&toDate=2026-03-23 09:00:00&locoId=30191
-     *   /api/station/packets?fromDate=2026-03-23 08:00:00&toDate=2026-03-23 09:00:00&stnCode=14011&locoId=30191
-     */
+
+
     @GetMapping("/packets")
     public ResponseEntity<?> getStationPackets(
             @RequestParam("fromDate") @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date fromDate,

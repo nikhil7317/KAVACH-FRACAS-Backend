@@ -5,21 +5,25 @@ import com.railbit.tcasanalysis.repository.StationaryPacketRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class StationQueryService {
 
     private static final Logger logger = LoggerFactory.getLogger(StationQueryService.class);
+    private static final int MAX_RESULTS = 100;
 
     @Autowired
     private StationaryPacketRepository stationaryPacketRepository;
 
     /**
-     * Find station packets with filters.
+     * Find station packets with filters - returns latest 100 records.
      *
      * @param fromDate required - start date/time
      * @param toDate   required - end date/time
@@ -30,14 +34,21 @@ public class StationQueryService {
 
         logger.info("Query: from={}, to={}, stnCode={}, locoId={}", fromDate, toDate, stnCode, locoId);
 
+        List<StationaryPacket> results;
+
         if (stnCode != null && locoId != null) {
-            return stationaryPacketRepository.findByDateRangeAndStnCodeAndLocoId(fromDate, toDate, stnCode, locoId);
+            results = stationaryPacketRepository.findByDateRangeAndStnCodeAndLocoId(fromDate, toDate, stnCode, locoId);
         } else if (stnCode != null) {
-            return stationaryPacketRepository.findByDateRangeAndStnCode(fromDate, toDate, stnCode);
+            results = stationaryPacketRepository.findByDateRangeAndStnCode(fromDate, toDate, stnCode);
         } else if (locoId != null) {
-            return stationaryPacketRepository.findByDateRangeAndLocoId(fromDate, toDate, locoId);
+            results = stationaryPacketRepository.findByDateRangeAndLocoId(fromDate, toDate, locoId);
         } else {
-            return stationaryPacketRepository.findByDateRange(fromDate, toDate);
+            results = stationaryPacketRepository.findByDateRange(fromDate, toDate);
         }
+
+        // Limit to latest 100 records (already sorted DESC by date in query)
+        return results.stream()
+                .limit(MAX_RESULTS)
+                .collect(Collectors.toList());
     }
 }
