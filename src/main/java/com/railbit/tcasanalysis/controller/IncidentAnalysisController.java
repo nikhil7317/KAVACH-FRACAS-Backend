@@ -11,7 +11,9 @@ public class IncidentAnalysisController {
 
     @Autowired
     private IncidentAnalysisService apiService;
-    //
+    
+
+    //tested
 
     @PostMapping("/send")
     public String sendData(@RequestBody RequestDto requestDto) {
