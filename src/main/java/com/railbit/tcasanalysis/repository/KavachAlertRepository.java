@@ -69,4 +69,10 @@ public interface KavachAlertRepository extends JpaRepository<KavachAlert, Long> 
             @Param("stnId") Integer stnId,
             @Param("severity") String severity,
             @Param("category") String category);
+
+    @Query("SELECT DISTINCT k.alertCode, k.alertMessage FROM KavachAlert k WHERE k.alertCategory = :category")
+    List<Object[]> findDistinctAlertCodeAndMessage(@Param("category") String category);
+
+    @Query("SELECT DISTINCT a.alertCategory FROM KavachAlert a ORDER BY a.alertCategory")
+    List<String> findDistinctAlertCategories();
 }

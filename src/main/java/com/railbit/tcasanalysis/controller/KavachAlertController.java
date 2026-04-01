@@ -79,4 +79,26 @@ public class KavachAlertController {
             return ResponseEntity.badRequest().body(Map.of("status", "error", "message", e.getMessage()));
         }
     }
+
+    @GetMapping("/nmsCategories")
+    public ResponseEntity<?> getDistinctAlertCategories() {
+        try {
+            List<String> categories = alertRepository.findDistinctAlertCategories();
+
+            List<Map<String, String>> categoryList = categories.stream()
+                    .map(cat -> Map.of(
+                            "label", cat,          // Display text  e.g. "EMERGENCY"
+                            "value", cat           // Filter string e.g. "EMERGENCY"
+                    ))
+                    .collect(java.util.stream.Collectors.toList());
+
+            return ResponseEntity.ok(Map.of(
+                    "status", "success",
+                    "count", categoryList.size(),
+                    "data", categoryList
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("status", "error", "message", e.getMessage()));
+        }
+    }
 }
