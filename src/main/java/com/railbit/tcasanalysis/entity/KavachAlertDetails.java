@@ -35,4 +35,7 @@ public class KavachAlertDetails {
 
     @Column(name = "ticket_status")
     private String ticketStatus;
+
+    @Transient                           // ← populated from incident_track
+    private String ticketRemarks;
 }

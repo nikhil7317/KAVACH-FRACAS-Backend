@@ -7,5 +7,7 @@ import java.util.Optional;
 
 @Repository
 public interface KavachAlertDetailsRepository extends JpaRepository<KavachAlertDetails, Long> {
-    Optional<KavachAlertDetails> findByKavachAlertId(Long kavachAlertId);
+
+    KavachAlertDetails findByKavachAlertId(Long kavachAlertId);
+    long countByTicketNoStartingWith(String prefix);
 }
