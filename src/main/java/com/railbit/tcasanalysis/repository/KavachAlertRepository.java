@@ -56,14 +56,15 @@ public interface KavachAlertRepository extends JpaRepository<KavachAlert, Long> 
             @Param("category") String category);
 
     // All filters
-    @Query("SELECT a FROM KavachAlert a " +
-           "WHERE a.eventTime BETWEEN :from AND :to " +
-           "AND (:locoId IS NULL OR a.locoId = :locoId) " +
-           "AND (:stnId IS NULL OR a.stationId = :stnId) " +
-           "AND (:severity IS NULL OR a.severity = :severity) " +
-           "AND (:category IS NULL OR a.alertCategory = :category) " +
-           "ORDER BY a.eventTime DESC")
-    List<KavachAlert> findByFilters(
+    @Query("SELECT a, d.ticketNo, d.ticketStatus FROM KavachAlert a " +
+            "LEFT JOIN KavachAlertDetails d ON d.kavachAlert.id = a.id " +
+            "WHERE a.eventTime BETWEEN :from AND :to " +
+            "AND (:locoId IS NULL OR a.locoId = :locoId) " +
+            "AND (:stnId IS NULL OR a.stationId = :stnId) " +
+            "AND (:severity IS NULL OR a.severity = :severity) " +
+            "AND (:category IS NULL OR a.alertCategory = :category) " +
+            "ORDER BY a.eventTime DESC")
+    List<Object[]> findByFiltersWithDetails(
             @Param("from") Date from, @Param("to") Date to,
             @Param("locoId") Integer locoId,
             @Param("stnId") Integer stnId,

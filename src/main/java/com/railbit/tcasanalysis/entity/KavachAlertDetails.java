@@ -38,4 +38,7 @@ public class KavachAlertDetails {
 
     @Transient                           // ← populated from incident_track
     private String ticketRemarks;
+
+    @Column(name = "auto_created", nullable = false)
+    private boolean autoCreated = false;
 }

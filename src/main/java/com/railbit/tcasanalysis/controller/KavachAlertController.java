@@ -9,8 +9,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/tcasapi/alerts")
@@ -38,8 +40,37 @@ public class KavachAlertController {
             @RequestParam(value = "category", required = false) String category) {
 
         try {
-            List<KavachAlert> alerts = alertRepository.findByFilters(
+            List<Object[]> results = alertRepository.findByFiltersWithDetails(
                     fromDate, toDate, locoId, stnId, severity, category);
+
+            List<Map<String, Object>> alerts = results.stream().map(row -> {
+                KavachAlert alert = (KavachAlert) row[0];
+                alert.setTicketNo((String) row[1]);
+                alert.setTicketStatus((String) row[2]);
+
+                // Convert to map for JSON response
+                Map<String, Object> map = new HashMap<>();
+                map.put("id", alert.getId());
+                map.put("eventTime", alert.getEventTime());
+                map.put("locoId", alert.getLocoId());
+                map.put("stationId", alert.getStationId());
+                map.put("alertCategory", alert.getAlertCategory());
+                map.put("alertCode", alert.getAlertCode());
+                map.put("alertMessage", alert.getAlertMessage());
+                map.put("severity", alert.getSeverity());
+                map.put("sourcePktType", alert.getSourcePktType());
+                map.put("locoPacketId", alert.getLocoPacketId());
+                map.put("trainSpeed", alert.getTrainSpeed());
+                map.put("locoMode", alert.getLocoMode());
+                map.put("absLocoLoc", alert.getAbsLocoLoc());
+                map.put("latitude", alert.getLatitude());
+                map.put("longitude", alert.getLongitude());
+                map.put("createdAt", alert.getCreatedAt());
+                map.put("lastRfidTag", alert.getLastRfidTag());
+                map.put("ticketNo", alert.getTicketNo());
+                map.put("ticketStatus", alert.getTicketStatus());
+                return map;
+            }).collect(Collectors.toList());
 
             return ResponseEntity.ok(Map.of(
                     "status", "success",
@@ -58,7 +89,6 @@ public class KavachAlertController {
             return ResponseEntity.badRequest().body(Map.of("status", "error", "message", e.getMessage()));
         }
     }
-
     @GetMapping("/counts")
     public ResponseEntity<?> getAlertCounts(
             @RequestParam("locoId") Integer locoId,
