@@ -14,6 +14,6 @@ public interface KavachAlertDetailsRepository extends JpaRepository<KavachAlertD
     boolean existsByKavachAlertId(Long kavachAlertId);
 
     @Query("SELECT COUNT(d) FROM KavachAlertDetails d " +
-         "WHERE FUNCTION('DATE', d.createdAt) = CURRENT_DATE")
-          long countTodayTickets();
+            "WHERE FUNCTION('DATE', d.incidentCreatedAt) = CURRENT_DATE")
+    long countTodayTickets();
 }
