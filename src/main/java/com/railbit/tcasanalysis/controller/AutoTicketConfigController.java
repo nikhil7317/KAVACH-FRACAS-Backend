@@ -39,11 +39,11 @@ public class AutoTicketConfigController {
      *
      * Request body:
      * {
-     *   "selectedCategories": ["BRAKE", "RFID_ISSUE"],
+     *   "selectedCategories": [1, 2, 3],
      *   "autoTicketEnabled": true,
      *   "autoEmailEnabled": false,
-     *   "userType": "RAILWAY",
-     *   "assignedToUserId": 42,
+     *   "railwayUserId": 42,
+     *   "oemUserId": 15,
      *   "createdByUserId": 1
      * }
      */
@@ -54,10 +54,14 @@ public class AutoTicketConfigController {
                 return ResponseEntity.badRequest().body(
                         Map.of("status", "error", "message", "At least one category must be selected."));
             }
-            if (dto.getAssignedToUserId() == null) {
+
+            // Only validate users if automation is enabled
+            boolean automationEnabled = dto.isAutoTicketEnabled() || dto.isAutoEmailEnabled();
+            if (automationEnabled && dto.getRailwayUserId() == null && dto.getOemUserId() == null) {
                 return ResponseEntity.badRequest().body(
-                        Map.of("status", "error", "message", "assignedToUserId is required."));
+                        Map.of("status", "error", "message", "At least one user (Railway or OEM) must be selected when automation is enabled."));
             }
+
             AutoTicketConfigDTO saved = configService.saveConfig(dto);
             return ResponseEntity.ok(Map.of(
                     "status", "success",

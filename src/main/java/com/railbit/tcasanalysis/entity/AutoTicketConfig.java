@@ -12,7 +12,7 @@ import java.util.List;
  *
  * When a KavachAlert arrives whose alertCategory is in selectedCategories,
  * the alert processing service reads this config and — if autoTicketEnabled —
- * automatically creates a KavachAlertDetails ticket assigned to assignedToUserId.
+ * automatically creates a KavachAlertDetails ticket assigned to railwayUserId or oemUserId.
  */
 @Entity
 @Table(name = "auto_ticket_config")
@@ -40,14 +40,18 @@ public class AutoTicketConfig {
     private boolean autoEmailEnabled = false;
 
     /**
-     * "RAILWAY" or "OEM" — mirrors the USER_TYPE_OPTIONS on the frontend.
+     * FK to the Railway user who should receive auto-assigned tickets.
+     * Can be null if only OEM user is set.
      */
-    @Column(name = "user_type", length = 20)
-    private String userType;
+    @Column(name = "railway_user_id")
+    private Long railwayUserId;
 
-    /** FK to the user who should receive auto-assigned tickets. */
-    @Column(name = "assigned_to_user_id")
-    private Long assignedToUserId;
+    /**
+     * FK to the OEM user who should receive auto-assigned tickets.
+     * Can be null if only Railway user is set.
+     */
+    @Column(name = "oem_user_id")
+    private Long oemUserId;
 
     /** Only one config row should be active at a time. */
     @Column(name = "is_active", nullable = false)
@@ -91,5 +95,24 @@ public class AutoTicketConfig {
         if (alertCategory == null) return false;
         return getCategoryList().stream()
                 .anyMatch(c -> c.trim().equalsIgnoreCase(alertCategory.trim()));
+    }
+
+    /**
+     * Returns the first available user ID for assignment.
+     * Priority: Railway user first, then OEM user.
+     * Returns null if neither is set.
+     */
+    @Transient
+    public Long getAssignedUserId() {
+        if (railwayUserId != null) return railwayUserId;
+        return oemUserId;
+    }
+
+    /**
+     * Returns true if at least one user (Railway or OEM) is configured.
+     */
+    @Transient
+    public boolean hasAssignedUser() {
+        return railwayUserId != null || oemUserId != null;
     }
 }

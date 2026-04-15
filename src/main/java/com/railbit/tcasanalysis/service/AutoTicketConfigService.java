@@ -8,7 +8,6 @@ import com.railbit.tcasanalysis.entity.User;
 import com.railbit.tcasanalysis.repository.AutoTicketConfigRepository;
 import com.railbit.tcasanalysis.repository.CategoryRepository;
 import com.railbit.tcasanalysis.repository.KavachAlertDetailsRepository;
-
 import com.railbit.tcasanalysis.repository.UserRepo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +15,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -28,7 +29,7 @@ public class AutoTicketConfigService {
 
     private final AutoTicketConfigRepository configRepository;
     private final KavachAlertDetailsRepository alertDetailsRepository;
-    private final UserRepo userRepository;          // needed to resolve User entities
+    private final UserRepo userRepository;
     private final CategoryRepository categoryRepository;
     // private final EmailService emailService;
 
@@ -54,16 +55,17 @@ public class AutoTicketConfigService {
                 .selectedCategories(String.join(",", categoryNames))
                 .autoTicketEnabled(dto.isAutoTicketEnabled())
                 .autoEmailEnabled(dto.isAutoEmailEnabled())
-                .userType(dto.getUserType())
-                .assignedToUserId(dto.getAssignedToUserId())
+                .railwayUserId(dto.getRailwayUserId())
+                .oemUserId(dto.getOemUserId())
                 .createdByUserId(dto.getCreatedByUserId())
                 .isActive(true)
                 .build();
 
         AutoTicketConfig saved = configRepository.save(config);
-        log.info("AutoTicketConfig saved: id={}, categories={}, autoTicket={}, autoEmail={}",
+        log.info("AutoTicketConfig saved: id={}, categories={}, autoTicket={}, autoEmail={}, railwayUserId={}, oemUserId={}",
                 saved.getId(), saved.getSelectedCategories(),
-                saved.isAutoTicketEnabled(), saved.isAutoEmailEnabled());
+                saved.isAutoTicketEnabled(), saved.isAutoEmailEnabled(),
+                saved.getRailwayUserId(), saved.getOemUserId());
         return toDTO(saved);
     }
 
@@ -85,20 +87,35 @@ public class AutoTicketConfigService {
             return;
         }
 
-        // ── Resolve User entities from stored IDs ─────────────────────────────
-        // KavachAlertDetails.assignedTo and .createdUser are @ManyToOne User,
-        // so we must pass User objects — NOT raw Long IDs.
-
+        // ── Resolve User entity from stored IDs ─────────────────────────────
+        // Priority: Railway user first, then OEM user
         User assignedTo = null;
-        if (config.getAssignedToUserId() != null) {
-            assignedTo = userRepository.findById(config.getAssignedToUserId())
-                    .orElseThrow(() -> new RuntimeException(
-                            "Assigned user not found: id=" + config.getAssignedToUserId()));
+
+        if (config.getRailwayUserId() != null) {
+            assignedTo = userRepository.findById(config.getRailwayUserId())
+                    .orElse(null);
+            if (assignedTo == null) {
+                log.warn("Railway user not found: id={}", config.getRailwayUserId());
+            }
+        }
+
+        // Fall back to OEM user if Railway user not found or not set
+        if (assignedTo == null && config.getOemUserId() != null) {
+            assignedTo = userRepository.findById(config.getOemUserId())
+                    .orElse(null);
+            if (assignedTo == null) {
+                log.warn("OEM user not found: id={}", config.getOemUserId());
+            }
+        }
+
+        if (assignedTo == null) {
+            log.error("No valid user found for auto-ticket creation. RailwayUserId={}, OemUserId={}",
+                    config.getRailwayUserId(), config.getOemUserId());
+            return;
         }
 
         User createdByUser = null;
         if (config.getCreatedByUserId() != null) {
-            // best-effort — don't fail if the admin user row is missing
             createdByUser = userRepository.findById(config.getCreatedByUserId()).orElse(null);
         }
 
@@ -109,14 +126,14 @@ public class AutoTicketConfigService {
         details.setKavachAlert(alert);
         details.setTicketNo(ticketNo);
         details.setTicketStatus("OPEN");
-        details.setAssignedTo(assignedTo);         // ✅  User object
-        details.setCreatedUser(createdByUser);     // ✅  User object
+        details.setAssignedTo(assignedTo);
+        details.setCreatedUser(createdByUser);
         details.setIncidentCreatedAt(LocalDateTime.now());
         details.setAutoCreated(true);
 
         alertDetailsRepository.save(details);
-        log.info("Auto-ticket created: ticketNo={}, alertId={}, assignedTo={}",
-                ticketNo, alert.getId(), config.getAssignedToUserId());
+        log.info("Auto-ticket created: ticketNo={}, alertId={}, assignedTo={} (userId={})",
+                ticketNo, alert.getId(), assignedTo.getName(), assignedTo.getId());
 
         if (config.isAutoEmailEnabled()) {
             // emailService.sendAutoTicketEmail(details, config);
@@ -136,11 +153,11 @@ public class AutoTicketConfigService {
 
         return AutoTicketConfigDTO.builder()
                 .id(c.getId())
-                .selectedCategories(categoryIds)   // ✅ List<Integer>
+                .selectedCategories(categoryIds)
                 .autoTicketEnabled(c.isAutoTicketEnabled())
                 .autoEmailEnabled(c.isAutoEmailEnabled())
-                .userType(c.getUserType())
-                .assignedToUserId(c.getAssignedToUserId())
+                .railwayUserId(c.getRailwayUserId())
+                .oemUserId(c.getOemUserId())
                 .createdByUserId(c.getCreatedByUserId())
                 .build();
     }
