@@ -5,12 +5,15 @@ import com.railbit.tcasanalysis.DTO.KavachAlertDetailsRequest;
 import com.railbit.tcasanalysis.DTO.KavachAlertDetailsResponseDTO;
 import com.railbit.tcasanalysis.entity.KavachAlertDetails;
 import com.railbit.tcasanalysis.entity.IncidentTrack;
+import com.railbit.tcasanalysis.entity.User;
 import com.railbit.tcasanalysis.repository.KavachAlertDetailsRepository;
 import com.railbit.tcasanalysis.repository.IncidentTrackRepository;
 import com.railbit.tcasanalysis.repository.KavachAlertRepository;
+import com.railbit.tcasanalysis.repository.OemRemarksRepository;
 import com.railbit.tcasanalysis.repository.UserRepo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -28,74 +31,105 @@ public class KavachAlertDetailsService {
     private KavachAlertRepository kavachAlertRepository;
 
     @Autowired
+    private OemRemarksRepository oemRemarksRepository;
+
+    @Autowired
     private UserRepo userRepository;
 
+    // ─── POST /alertDetails ───────────────────────────────────────────────────
 
     public void save(KavachAlertDetailsRequest request) {
-
         KavachAlertDetails details = new KavachAlertDetails();
 
-        // Fetch entity by ID, then set it
         details.setKavachAlert(
                 kavachAlertRepository.findById(request.getKavachAlertId())
                         .orElseThrow(() -> new RuntimeException("KavachAlert not found"))
         );
         details.setCreatedUser(
                 userRepository.findById(request.getCreatedUserId())
-                        .orElseThrow(() -> new RuntimeException("User not found"))
+                        .orElseThrow(() -> new RuntimeException("Created user not found"))
         );
         details.setAssignedTo(
                 userRepository.findById(request.getAssignedToId())
-                        .orElseThrow(() -> new RuntimeException("AssignedTo User not found"))
+                        .orElseThrow(() -> new RuntimeException("AssignedTo user not found"))
         );
-
         details.setIncidentCreatedAt(request.getIncidentCreatedAt());
         details.setTicketNo(request.getTicketNo());
-
-        // FIX: Set ticketStatus from request - THIS WAS MISSING
         details.setTicketStatus(request.getTicketStatus());
 
         KavachAlertDetails saved = detailsRepository.save(details);
 
-        // Remarks go ONLY into incident_track
         IncidentTrack track = new IncidentTrack();
         track.setKavachAlertDetails(saved);
         track.setCreatedUser(saved.getCreatedUser());
         track.setIncidentCreatedAt(saved.getIncidentCreatedAt());
-        track.setTicketStatus(saved.getTicketStatus());  // Now this will have the value
+        track.setTicketStatus(saved.getTicketStatus());
         track.setTicketRemarks(request.getTicketRemarks());
-
         incidentTrackRepository.save(track);
     }
 
+    // ─── PUT /alertDetails/{id} ───────────────────────────────────────────────
+
     public void update(Long id, KavachAlertDetailsRequest request) {
         KavachAlertDetails details = detailsRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Alert details not found with id: " + id));
+                .orElseThrow(() -> new RuntimeException("Alert details not found: " + id));
 
-        // Update only the fields that can change
         details.setAssignedTo(
                 userRepository.findById(request.getAssignedToId())
-                        .orElseThrow(() -> new RuntimeException("AssignedTo User not found"))
+                        .orElseThrow(() -> new RuntimeException("AssignedTo user not found"))
         );
         details.setTicketStatus(request.getTicketStatus());
-        // Keep existing: kavachAlert, createdUser, incidentCreatedAt, ticketNo
 
         KavachAlertDetails updated = detailsRepository.save(details);
 
-        // Add new track record for this update
         IncidentTrack track = new IncidentTrack();
         track.setKavachAlertDetails(updated);
         track.setCreatedUser(
                 userRepository.findById(request.getCreatedUserId())
-                        .orElseThrow(() -> new RuntimeException("User not found"))
+                        .orElseThrow(() -> new RuntimeException("Created user not found"))
         );
         track.setIncidentCreatedAt(LocalDateTime.now());
         track.setTicketStatus(request.getTicketStatus());
         track.setTicketRemarks(request.getTicketRemarks());
-
         incidentTrackRepository.save(track);
     }
-    // Keep for backward compatibility if needed
+
+    // ─── GET /alertDetails/{kavachAlertId} ───────────────────────────────────
+
+    public KavachAlertDetailsResponseDTO getAlertDetailsWithTracks(Long kavachAlertId) {
+        KavachAlertDetails details = detailsRepository.findByKavachAlertId(kavachAlertId);
+
+        if (details == null) {
+            throw new RuntimeException(
+                    "Alert details not found for kavach_alert_id: " + kavachAlertId);
+        }
+
+        List<IncidentTrack> tracks = incidentTrackRepository
+                .findByKavachAlertDetailsIdOrderByIncidentCreatedAtDesc(details.getId());
+
+        KavachAlertDetailsResponseDTO response = new KavachAlertDetailsResponseDTO();
+        response.setId(details.getId());
+        response.setKavachAlert(details.getKavachAlert());
+        response.setCreatedUser(details.getCreatedUser());
+        response.setAssignedTo(details.getAssignedTo());
+        response.setTicketNo(details.getTicketNo());
+        response.setTicketStatus(details.getTicketStatus());
+        response.setIncidentCreatedAt(details.getIncidentCreatedAt());
+
+        // ✅ Check oem_remarks table directly — clean and reliable
+        boolean hasOemRemarks = oemRemarksRepository
+                .existsByKavachAlertDetailsId(details.getId());
+        response.setOemRemarksSubmitted(hasOemRemarks);
+
+        response.setIncidentTracks(
+                tracks.stream().map(this::mapToIncidentTrackDTO).collect(Collectors.toList())
+        );
+
+        return response;
+    }
+
+    // ─── Backward compat ─────────────────────────────────────────────────────
+
     public KavachAlertDetails findById(Long id) {
         KavachAlertDetails details = detailsRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Not found"));
@@ -107,35 +141,7 @@ public class KavachAlertDetailsService {
         return details;
     }
 
-    public KavachAlertDetailsResponseDTO getAlertDetailsWithTracks(Long kavachAlertId) {
-        KavachAlertDetails details = detailsRepository.findByKavachAlertId(kavachAlertId);
-
-        if (details == null) {
-            throw new RuntimeException("Alert details not found for kavach_alert_id: " + kavachAlertId);
-        }
-
-        List<IncidentTrack> tracks = incidentTrackRepository
-                .findByKavachAlertDetailsIdOrderByIncidentCreatedAtDesc(details.getId());
-
-        KavachAlertDetailsResponseDTO response = new KavachAlertDetailsResponseDTO();
-
-        response.setId(details.getId());
-        response.setKavachAlert(details.getKavachAlert());   // parent
-        response.setCreatedUser(details.getCreatedUser());
-        response.setTicketNo(details.getTicketNo());
-
-        List<IncidentTrackDTO> trackDTOs = tracks.stream()
-                .map(this::mapToIncidentTrackDTO)
-                .collect(Collectors.toList());
-
-        response.setIncidentTracks(trackDTOs);   // all child records
-
-        return response;
-    }
-
-    public void saveIncidentTrack(IncidentTrack track) {
-        incidentTrackRepository.save(track);
-    }
+    // ─── Mapper ───────────────────────────────────────────────────────────────
 
     private IncidentTrackDTO mapToIncidentTrackDTO(IncidentTrack track) {
         IncidentTrackDTO dto = new IncidentTrackDTO();
@@ -143,6 +149,36 @@ public class KavachAlertDetailsService {
         dto.setIncidentCreatedAt(track.getIncidentCreatedAt());
         dto.setTicketRemarks(track.getTicketRemarks());
         dto.setTicketStatus(track.getTicketStatus());
+        if (track.getCreatedUser() != null) {
+            dto.setCreatedUser(mapToUserSummary(track.getCreatedUser()));
+        }
         return dto;
+    }
+
+    public void saveIncidentTrack(IncidentTrack track) {
+        // Resolve createdUser from DB using the id sent in payload
+        // so designation is always correct — never trust client-side designation data
+        if (track.getCreatedUser() != null && track.getCreatedUser().getId() != null) {
+            User user = userRepository.findById(track.getCreatedUser().getId())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            track.setCreatedUser(user);  // full user with real designation from DB
+        }
+        // Remove ticketStatus enforcement — OEM check is purely by designation
+        incidentTrackRepository.save(track);
+    }
+
+    private IncidentTrackDTO.UserSummaryDTO mapToUserSummary(User user) {
+        IncidentTrackDTO.UserSummaryDTO userDTO = new IncidentTrackDTO.UserSummaryDTO();
+        userDTO.setId(user.getId());
+        userDTO.setName(user.getName());
+        if (user.getDesignation() != null) {
+            IncidentTrackDTO.UserSummaryDTO.DesignationSummaryDTO desig =
+                    new IncidentTrackDTO.UserSummaryDTO.DesignationSummaryDTO();
+            desig.setId(user.getDesignation().getId());
+            desig.setName(user.getDesignation().getName());
+            desig.setTitle(user.getDesignation().getTitle());
+            userDTO.setDesignation(desig);
+        }
+        return userDTO;
     }
 }
