@@ -1,6 +1,7 @@
 package com.railbit.tcasanalysis.service;
 
 
+import com.railbit.tcasanalysis.repository.KavachAlertRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +16,9 @@ public class MissingTagReportService {
     @Autowired
     private EntityManager entityManager;
 
+    @Autowired
+    private KavachAlertRepository repository;
+
     /**
      * Get missing/faulty RFID tag report from kavach_alert table.
      *
@@ -23,19 +27,29 @@ public class MissingTagReportService {
      * @param locoId   optional - filter by loco
      * @return list of tag events + summary counts
      */
-    public Map<String, Object> getMissingTagReport(Date fromDate, Date toDate, Integer locoId) {
+    public Map<String, Object> getMissingTagReport(Date fromDate, Date toDate, Integer locoId, Integer alertCode, String severity, Integer stnId  ) {
 
         // 1. Fetch all TAG_LINK alerts
         String sql =
                 "SELECT a.event_time, a.loco_id, a.station_id, a.alert_code, " +
                         "       a.alert_message, a.last_rfid_tag, a.train_speed, " +
-                        "       a.loco_mode, a.abs_loco_loc, a.alert_category, a.source_pkt_type " +
+                        "       a.loco_mode, a.abs_loco_loc, a.alert_category, a.source_pkt_type, a.severity " +
                         "FROM kavach_alert a " +
                         "WHERE a.alert_category IN ('TAG_LINK', 'RFID_ISSUE') " +
                         "AND a.event_time BETWEEN :fromDate AND :toDate ";
 
         if (locoId != null) {
             sql += "AND a.loco_id = :locoId ";
+        }
+
+        if (alertCode != null) {
+            sql += "AND a.alert_code = :alertCode ";
+        }
+        if (severity != null && !severity.isEmpty()) {
+            sql += "AND a.severity = :severity ";
+        }
+        if (stnId != null) {
+            sql += "AND a.station_id = :stnId ";
         }
         sql += "ORDER BY a.event_time DESC";
 
@@ -44,6 +58,16 @@ public class MissingTagReportService {
         query.setParameter("toDate", toDate);
         if (locoId != null) {
             query.setParameter("locoId", locoId);
+        }
+        if (alertCode != null) {
+            query.setParameter("alertCode", alertCode);
+        }
+
+        if (severity != null && !severity.isEmpty()) {
+            query.setParameter("severity", severity);
+        }
+        if (stnId != null) {
+            query.setParameter("stnId", stnId);
         }
 
         List<Object[]> rows = query.getResultList();
@@ -68,6 +92,7 @@ public class MissingTagReportService {
             event.put("absLocoLoc", row[8]);
             event.put("alertCategory", row[9]);
             event.put("sourcePktType", row[10]);
+            event.put("severity", row[11]);
             events.add(event);
 
             String category = row[9] != null ? row[9].toString() : "";
@@ -111,6 +136,22 @@ public class MissingTagReportService {
         result.put("affectedLocos", uniqueLocos);
         result.put("affectedLocoCount", uniqueLocos.size());
         result.put("events", events);
+
+        return result;
+    }
+
+    public List<Map<String, Object>> getDistinctAlertMessagesWithId(String category) {
+
+        List<Object[]> rows = repository.findDistinctAlertCodeAndMessage(category);
+
+        List<Map<String, Object>> result = new ArrayList<>();
+
+        for (Object[] row : rows) {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", row[0]);          // alertCode
+            map.put("message", row[1]);     // alertMessage
+            result.add(map);
+        }
 
         return result;
     }

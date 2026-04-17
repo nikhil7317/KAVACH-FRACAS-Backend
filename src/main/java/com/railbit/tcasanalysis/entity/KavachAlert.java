@@ -97,6 +97,13 @@ public class KavachAlert {
     @Column(name = "last_rfid_tag")
     private Integer lastRfidTag;
 
+    // Add these fields to KavachAlert.java
+    @Transient
+    private String ticketNo;
+
+    @Transient
+    private String ticketStatus;
+
     @PrePersist
     protected void onCreate() { createdAt = new Date(); }
 }

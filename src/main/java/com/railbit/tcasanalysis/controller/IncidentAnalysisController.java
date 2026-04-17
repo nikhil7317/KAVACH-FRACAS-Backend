@@ -19,7 +19,6 @@ public class IncidentAnalysisController {
     public String sendData(@RequestBody RequestDto requestDto) {
         return apiService.callTeammateApi(requestDto);
 
-        //comment 
-        // hdhhd
+    
     }
 }

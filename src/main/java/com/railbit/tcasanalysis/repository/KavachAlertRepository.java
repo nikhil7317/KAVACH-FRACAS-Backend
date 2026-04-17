@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.data.domain.Pageable;
 
 import java.util.Date;
 import java.util.List;
@@ -56,17 +57,36 @@ public interface KavachAlertRepository extends JpaRepository<KavachAlert, Long> 
             @Param("category") String category);
 
     // All filters
-    @Query("SELECT a FROM KavachAlert a " +
-           "WHERE a.eventTime BETWEEN :from AND :to " +
-           "AND (:locoId IS NULL OR a.locoId = :locoId) " +
-           "AND (:stnId IS NULL OR a.stationId = :stnId) " +
-           "AND (:severity IS NULL OR a.severity = :severity) " +
-           "AND (:category IS NULL OR a.alertCategory = :category) " +
-           "ORDER BY a.eventTime DESC")
-    List<KavachAlert> findByFilters(
-            @Param("from") Date from, @Param("to") Date to,
+    @Query("SELECT a, d.ticketNo, d.ticketStatus FROM KavachAlert a " +
+            "LEFT JOIN KavachAlertDetails d ON d.kavachAlert.id = a.id " +
+            "WHERE a.eventTime BETWEEN :from AND :to " +
+            "AND (:locoId IS NULL OR a.locoId = :locoId) " +
+            "AND (:stnId IS NULL OR a.stationId = :stnId) " +
+            "AND (:severity IS NULL OR a.severity = :severity) " +
+            "AND (:category IS NULL OR a.alertCategory = :category) " +
+            "ORDER BY a.eventTime DESC")
+    List<Object[]> findByFiltersWithDetails(
+            @Param("from") Date from,
+            @Param("to") Date to,
             @Param("locoId") Integer locoId,
             @Param("stnId") Integer stnId,
             @Param("severity") String severity,
-            @Param("category") String category);
+            @Param("category") String category,
+            Pageable pageable);   // 👈 REQUIRED
+
+    @Query("SELECT DISTINCT k.alertCode, k.alertMessage FROM KavachAlert k WHERE k.alertCategory = :category")
+    List<Object[]> findDistinctAlertCodeAndMessage(@Param("category") String category);
+
+    @Query("SELECT DISTINCT a.alertCategory FROM KavachAlert a ORDER BY a.alertCategory")
+    List<String> findDistinctAlertCategories();
+
+
+    @Query(value = "SELECT a.alert_message, s.name AS station_name, a.event_time " +
+            "FROM kavach_alert a " +
+            "LEFT JOIN station s ON a.station_id = s.tcas_subsys_id " +
+            "WHERE DATE(a.event_time) = CURRENT_DATE " +
+            "ORDER BY a.event_time DESC " +
+            "LIMIT 10",
+            nativeQuery = true)
+    List<Object[]> findTop10TodayAlerts();
 }
