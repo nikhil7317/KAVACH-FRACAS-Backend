@@ -79,20 +79,22 @@ public interface KavachAlertDashboardRepository extends JpaRepository<KavachAler
     // ── Station-wise ──────────────────────────────────────────────────────────
 
     @Query(value = """
-            SELECT ka.station_id, COUNT(*) AS cnt
-            FROM kavach_alert ka
-            WHERE ka.event_time >= :fromDate AND ka.event_time < :toDate
-              AND ka.station_id IS NOT NULL AND ka.station_id <> 0
-              AND NOT EXISTS (
-                  SELECT 1 FROM alert_message_config amc
-                  WHERE amc.enabled = false
-                    AND amc.alert_category = ka.alert_category
-                    AND amc.alert_message  = ka.alert_message
-              )
-            GROUP BY ka.station_id
-            ORDER BY cnt DESC
-            """, nativeQuery = true)
-    List<Object[]> countByStationId(@Param("fromDate") Date fromDate, @Param("toDate") Date toDate);
+        SELECT s.code AS station_name, COUNT(*) AS cnt
+        FROM kavach_alert ka
+        LEFT JOIN station s ON ka.station_id = s.tcas_subsys_id
+        WHERE ka.event_time >= :fromDate AND ka.event_time < :toDate
+          AND ka.station_id IS NOT NULL AND ka.station_id <> 0
+          AND NOT EXISTS (
+              SELECT 1 FROM alert_message_config amc
+              WHERE amc.enabled = false
+                AND amc.alert_category = ka.alert_category
+                AND amc.alert_message  = ka.alert_message
+          )
+        GROUP BY s.code
+        ORDER BY cnt DESC
+        """, nativeQuery = true)
+    List<Object[]> countByStationId(@Param("fromDate") Date fromDate,
+                                    @Param("toDate") Date toDate);
 
     // ── Ticket counts ─────────────────────────────────────────────────────────
 
@@ -112,36 +114,58 @@ public interface KavachAlertDashboardRepository extends JpaRepository<KavachAler
     Long countAlertsWithTicketInRange(@Param("fromDate") Date fromDate, @Param("toDate") Date toDate);
 
     @Query(value = """
-            SELECT COUNT(DISTINCT kad.ticket_no)
-            FROM kavach_alert ka
-            INNER JOIN kavach_alert_details kad ON ka.id = kad.kavach_alert_id
-            WHERE ka.event_time >= :fromDate AND ka.event_time < :toDate
-              AND kad.ticket_no IS NOT NULL AND kad.ticket_no <> ''
-              AND UPPER(kad.ticket_status) = 'OPEN'
-              AND NOT EXISTS (
-                  SELECT 1 FROM alert_message_config amc
-                  WHERE amc.enabled = false
-                    AND amc.alert_category = ka.alert_category
-                    AND amc.alert_message  = ka.alert_message
-              )
-            """, nativeQuery = true)
-    Long countOpenTicketsInRange(@Param("fromDate") Date fromDate, @Param("toDate") Date toDate);
+        SELECT COUNT(DISTINCT kad.ticket_no)
+        FROM incident_track it
+        INNER JOIN kavach_alert_details kad ON it.kavach_alert_details_id = kad.id
+        INNER JOIN kavach_alert ka ON ka.id = kad.kavach_alert_id
+        WHERE it.incident_created_at >= :fromDate 
+          AND it.incident_created_at < :toDate
+          AND UPPER(it.ticket_status) = 'OPEN'
+          AND kad.ticket_no IS NOT NULL AND kad.ticket_no <> ''
+          AND NOT EXISTS (
+              SELECT 1 FROM alert_message_config amc
+              WHERE amc.enabled = false
+                AND amc.alert_category = ka.alert_category
+                AND amc.alert_message  = ka.alert_message
+          )
+        """, nativeQuery = true)
+    Long countOpenTicketsInRange(@Param("fromDate") Date fromDate,
+                                 @Param("toDate") Date toDate);
 
     @Query(value = """
-            SELECT COUNT(DISTINCT kad.ticket_no)
-            FROM kavach_alert ka
-            INNER JOIN kavach_alert_details kad ON ka.id = kad.kavach_alert_id
-            WHERE ka.event_time >= :fromDate AND ka.event_time < :toDate
-              AND kad.ticket_no IS NOT NULL AND kad.ticket_no <> ''
-              AND UPPER(kad.ticket_status) IN ('CLOSED', 'CLOSE')
-              AND NOT EXISTS (
-                  SELECT 1 FROM alert_message_config amc
-                  WHERE amc.enabled = false
-                    AND amc.alert_category = ka.alert_category
-                    AND amc.alert_message  = ka.alert_message
-              )
-            """, nativeQuery = true)
-    Long countClosedTicketsInRange(@Param("fromDate") Date fromDate, @Param("toDate") Date toDate);
+        SELECT COUNT(DISTINCT kad.ticket_no)
+        FROM incident_track it
+        INNER JOIN kavach_alert_details kad ON it.kavach_alert_details_id = kad.id
+        INNER JOIN kavach_alert ka ON ka.id = kad.kavach_alert_id
+        WHERE it.incident_created_at >= :fromDate 
+          AND it.incident_created_at < :toDate
+          AND UPPER(it.ticket_status) IN ('CLOSED', 'CLOSE')
+          AND kad.ticket_no IS NOT NULL AND kad.ticket_no <> ''
+          AND NOT EXISTS (
+              SELECT 1 FROM alert_message_config amc
+              WHERE amc.enabled = false
+                AND amc.alert_category = ka.alert_category
+                AND amc.alert_message  = ka.alert_message
+          )
+        """, nativeQuery = true)
+    Long countClosedTicketsInRange(@Param("fromDate") Date fromDate,
+                                   @Param("toDate") Date toDate);
+
+    // ── Critical alerts count ─────────────────────────────────────────────────
+
+    @Query(value = """
+        SELECT COUNT(*)
+        FROM kavach_alert ka
+        WHERE ka.event_time >= :fromDate AND ka.event_time < :toDate
+          AND UPPER(ka.severity) = 'CRITICAL'
+          AND NOT EXISTS (
+              SELECT 1 FROM alert_message_config amc
+              WHERE amc.enabled = false
+                AND amc.alert_category = ka.alert_category
+                AND amc.alert_message  = ka.alert_message
+          )
+        """, nativeQuery = true)
+    Long countCriticalAlertsInRange(@Param("fromDate") Date fromDate, @Param("toDate") Date toDate);
 
     // ── Monthly category-wise (12 months) ─────────────────────────────────────
 

@@ -4,9 +4,11 @@ import com.railbit.tcasanalysis.entity.KavachAlert;
 import com.railbit.tcasanalysis.repository.KavachAlertRepository;
 import com.railbit.tcasanalysis.service.AlertCountService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.data.domain.PageRequest;
 
 import java.util.Date;
 import java.util.HashMap;
@@ -23,6 +25,8 @@ public class KavachAlertController {
     @Autowired
     private KavachAlertRepository alertRepository;
 
+
+
     /**
      * GET /api/alerts?fromDate=2026-03-23 00:00:00&toDate=2026-03-23 23:59:59
      *               &locoId=37146&stnId=37006&severity=CRITICAL&category=EMERGENCY
@@ -32,6 +36,7 @@ public class KavachAlertController {
      */
     @GetMapping
     public ResponseEntity<?> getAlerts(
+
             @RequestParam("fromDate") @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date fromDate,
             @RequestParam("toDate") @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date toDate,
             @RequestParam(value = "locoId", required = false) Integer locoId,
@@ -40,8 +45,9 @@ public class KavachAlertController {
             @RequestParam(value = "category", required = false) String category) {
 
         try {
+            Pageable pageable = PageRequest.of(0, 100);
             List<Object[]> results = alertRepository.findByFiltersWithDetails(
-                    fromDate, toDate, locoId, stnId, severity, category);
+                    fromDate, toDate, locoId, stnId, severity, category, pageable);
 
             List<Map<String, Object>> alerts = results.stream().map(row -> {
                 KavachAlert alert = (KavachAlert) row[0];
@@ -129,6 +135,32 @@ public class KavachAlertController {
             ));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("status", "error", "message", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/liveAlertMessage")
+    public ResponseEntity<?> getLiveAlerts() {
+        try {
+            List<Object[]> results = alertRepository.findTop10TodayAlerts();
+
+            List<Map<String, Object>> data = results.stream().map(row -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("alertMessage", row[0]);
+                map.put("stationName", row[1]);
+                map.put("eventTime", row[2]);
+                return map;
+            }).collect(Collectors.toList());
+
+            return ResponseEntity.ok(Map.of(
+                    "status", "success",
+                    "count", data.size(),
+                    "data", data
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "status", "error",
+                    "message", e.getMessage()
+            ));
         }
     }
 }

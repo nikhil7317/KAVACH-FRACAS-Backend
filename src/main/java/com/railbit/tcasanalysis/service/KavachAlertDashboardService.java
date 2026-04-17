@@ -43,6 +43,7 @@ public class KavachAlertDashboardService {
         Date adjustedTo = endOfDay(toDate);
 
         long total = repo.countAlertsInRange(fromDate, adjustedTo);
+        long criticalAlerts = repo.countCriticalAlertsInRange(fromDate, adjustedTo);
 
         // Ticket counts — replace these queries if ticket data is in another table
         long withTicket    = repo.countAlertsWithTicketInRange(fromDate, adjustedTo);
@@ -53,6 +54,7 @@ public class KavachAlertDashboardService {
 
         return List.of(
                 card("Total Incidents",                       total),
+                card("Critical Alerts",                       criticalAlerts),  // NEW
                 card("Incidents Without Attached Ticket",     withoutTicket),
                 card("Incidents With Attached Ticket",        withTicket),
                 card("Total Unique Tickets Generated",        uniqueTickets),
