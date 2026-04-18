@@ -207,9 +207,7 @@ public class LocoTelemetryController {
             }
         }
 
-        if (packet.getOnboardRegularPackets() != null && !packet.getOnboardRegularPackets().isEmpty()) {
-            // Extend here when onboardRegularPackets carry telemetry data
-        }
+
 
         return results;
     }
