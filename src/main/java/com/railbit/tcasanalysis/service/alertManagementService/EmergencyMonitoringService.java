@@ -38,13 +38,21 @@ public class EmergencyMonitoringService {
         List<Map<String, Object>> table = new ArrayList<>();
 
         for (Object[] r : rows) {
+
+            String ticketStatus = r[6] != null ? r[6].toString().toUpperCase() : null;
+
+            String notificationStatus =
+                    ("OPEN".equals(ticketStatus) || "CLOSED".equals(ticketStatus))
+                            ? "Sent"
+                            : "Pending";
             table.add(Map.of(
                     "time", r[0],
                     "locoNo", r[1],
                     "stationName", r[2],
                     "eventType", r[3],
                     "category", r[4],
-                    "severity", r[5]
+                    "severity", r[5],
+                    "notificationStatus", notificationStatus
             ));
         }
 
