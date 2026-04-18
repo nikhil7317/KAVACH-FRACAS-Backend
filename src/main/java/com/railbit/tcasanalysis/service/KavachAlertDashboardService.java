@@ -45,7 +45,7 @@ public class KavachAlertDashboardService {
         long total = repo.countAlertsInRange(fromDate, adjustedTo);
         long criticalAlerts = repo.countCriticalAlertsInRange(fromDate, adjustedTo);
 
-        // Ticket counts — replace these queries if ticket data is in another table
+       
         long withTicket    = repo.countAlertsWithTicketInRange(fromDate, adjustedTo);
         long withoutTicket = total - withTicket;
         long openTickets   = repo.countOpenTicketsInRange(fromDate, adjustedTo);
