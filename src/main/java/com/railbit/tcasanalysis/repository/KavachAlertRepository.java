@@ -57,14 +57,23 @@ public interface KavachAlertRepository extends JpaRepository<KavachAlert, Long> 
             @Param("category") String category);
 
     // All filters
-    @Query("SELECT a, d.ticketNo, d.ticketStatus FROM KavachAlert a " +
-            "LEFT JOIN KavachAlertDetails d ON d.kavachAlert.id = a.id " +
-            "WHERE a.eventTime BETWEEN :from AND :to " +
-            "AND (:locoId IS NULL OR a.locoId = :locoId) " +
-            "AND (:stnId IS NULL OR a.stationId = :stnId) " +
-            "AND (:severity IS NULL OR a.severity = :severity) " +
-            "AND (:category IS NULL OR a.alertCategory = :category) " +
-            "ORDER BY a.eventTime DESC")
+    @Query(value = """
+        SELECT ka.*, kad.ticket_no, kad.ticket_status
+        FROM kavach_alert ka
+        LEFT JOIN kavach_alert_details kad ON kad.kavach_alert_id = ka.id
+        WHERE ka.event_time BETWEEN :from AND :to
+          AND (:locoId IS NULL OR ka.loco_id = :locoId)
+          AND (:stnId IS NULL OR ka.station_id = :stnId)
+          AND (:severity IS NULL OR ka.severity = :severity)
+          AND (:category IS NULL OR ka.alert_category = :category)
+          AND NOT EXISTS (
+              SELECT 1 FROM alert_message_config amc
+              WHERE amc.enabled = false
+                AND amc.alert_category = ka.alert_category
+                AND amc.alert_message  = ka.alert_message
+          )
+        ORDER BY ka.event_time DESC
+        """, nativeQuery = true)
     List<Object[]> findByFiltersWithDetails(
             @Param("from") Date from,
             @Param("to") Date to,
@@ -72,7 +81,7 @@ public interface KavachAlertRepository extends JpaRepository<KavachAlert, Long> 
             @Param("stnId") Integer stnId,
             @Param("severity") String severity,
             @Param("category") String category,
-            Pageable pageable);   // 👈 REQUIRED
+            Pageable pageable);
 
     @Query("SELECT DISTINCT k.alertCode, k.alertMessage FROM KavachAlert k WHERE k.alertCategory = :category")
     List<Object[]> findDistinctAlertCodeAndMessage(@Param("category") String category);

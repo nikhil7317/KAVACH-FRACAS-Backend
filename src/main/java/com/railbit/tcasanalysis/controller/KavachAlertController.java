@@ -36,13 +36,12 @@ public class KavachAlertController {
      */
     @GetMapping
     public ResponseEntity<?> getAlerts(
-
             @RequestParam("fromDate") @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date fromDate,
-            @RequestParam("toDate") @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date toDate,
-            @RequestParam(value = "locoId", required = false) Integer locoId,
-            @RequestParam(value = "stnId", required = false) Integer stnId,
-            @RequestParam(value = "severity", required = false) String severity,
-            @RequestParam(value = "category", required = false) String category) {
+            @RequestParam("toDate")   @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date toDate,
+            @RequestParam(value = "locoId",    required = false) Integer locoId,
+            @RequestParam(value = "stnId",     required = false) Integer stnId,
+            @RequestParam(value = "severity",  required = false) String severity,
+            @RequestParam(value = "category",  required = false) String category) {
 
         try {
             Pageable pageable = PageRequest.of(0, 100);
@@ -50,67 +49,69 @@ public class KavachAlertController {
                     fromDate, toDate, locoId, stnId, severity, category, pageable);
 
             List<Map<String, Object>> alerts = results.stream().map(row -> {
-                KavachAlert alert = (KavachAlert) row[0];
-                alert.setTicketNo((String) row[1]);
-                alert.setTicketStatus((String) row[2]);
-
-                // Convert to map for JSON response
                 Map<String, Object> map = new HashMap<>();
-                map.put("id", alert.getId());
-                map.put("eventTime", alert.getEventTime());
-                map.put("locoId", alert.getLocoId());
-                map.put("stationId", alert.getStationId());
-                map.put("alertCategory", alert.getAlertCategory());
-                map.put("alertCode", alert.getAlertCode());
-                map.put("alertMessage", alert.getAlertMessage());
-                map.put("severity", alert.getSeverity());
-                map.put("sourcePktType", alert.getSourcePktType());
-                map.put("locoPacketId", alert.getLocoPacketId());
-                map.put("trainSpeed", alert.getTrainSpeed());
-                map.put("locoMode", alert.getLocoMode());
-                map.put("absLocoLoc", alert.getAbsLocoLoc());
-                map.put("latitude", alert.getLatitude());
-                map.put("longitude", alert.getLongitude());
-                map.put("createdAt", alert.getCreatedAt());
-                map.put("lastRfidTag", alert.getLastRfidTag());
-                map.put("ticketNo", alert.getTicketNo());
-                map.put("ticketStatus", alert.getTicketStatus());
+
+                // Native query returns raw columns — cast carefully
+                map.put("id",            row[0]);
+                map.put("eventTime",     row[1]);
+                map.put("locoId",        row[2]);
+                map.put("stationId",     row[3]);
+                map.put("alertCategory", row[4]);
+                map.put("alertCode",     row[5]);
+                map.put("alertMessage",  row[6]);
+                map.put("severity",      row[7]);
+                map.put("sourcePktType", row[8]);
+                map.put("locoPacketId",  row[9]);
+                map.put("trainSpeed",    row[10]);
+                map.put("locoMode",      row[11]);
+                map.put("absLocoLoc",    row[12]);
+                map.put("latitude",      row[13]);
+                map.put("longitude",     row[14]);
+                map.put("createdAt",     row[15]);
+                map.put("lastRfidTag",   row[16]);
+                // LEFT JOIN columns from kavach_alert_details
+                map.put("ticketNo",      row[17]);
+                map.put("ticketStatus",  row[18]);
+
                 return map;
             }).collect(Collectors.toList());
 
             return ResponseEntity.ok(Map.of(
                     "status", "success",
-                    "count", alerts.size(),
+                    "count",  alerts.size(),
                     "filters", Map.of(
                             "fromDate", fromDate,
-                            "toDate", toDate,
-                            "locoId", locoId != null ? locoId : "all",
-                            "stnId", stnId != null ? stnId : "all",
+                            "toDate",   toDate,
+                            "locoId",   locoId   != null ? locoId   : "all",
+                            "stnId",    stnId    != null ? stnId    : "all",
                             "severity", severity != null ? severity : "all",
                             "category", category != null ? category : "all"
                     ),
                     "data", alerts
             ));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("status", "error", "message", e.getMessage()));
+            return ResponseEntity.badRequest().body(
+                    Map.of("status", "error", "message", e.getMessage()));
         }
     }
     @GetMapping("/counts")
     public ResponseEntity<?> getAlertCounts(
-            @RequestParam("locoId") Integer locoId,
+            @RequestParam(value = "locoId", required = false) Integer locoId,
             @RequestParam("fromDate") @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date fromDate,
             @RequestParam("toDate") @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date toDate) {
 
         try {
             Map<String, Integer> counts = alertCountService.getAlertCounts(locoId, fromDate, toDate);
 
-            return ResponseEntity.ok(Map.of(
-                    "status", "success",
-                    "locoId", locoId,
-                    "fromDate", fromDate,
-                    "toDate", toDate,
-                    "alertCounts", counts
-            ));
+            // Use HashMap instead of Map.of() to allow null values, or convert null to "all"
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "success");
+            response.put("locoId", locoId != null ? locoId : "all");
+            response.put("fromDate", fromDate);
+            response.put("toDate", toDate);
+            response.put("alertCounts", counts);
+
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("status", "error", "message", e.getMessage()));
         }

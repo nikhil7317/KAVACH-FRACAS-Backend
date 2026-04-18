@@ -42,7 +42,7 @@ public class AlertCountService {
             "  SUM(CASE WHEN orp.tag_link_info = 1 THEN 1 ELSE 0 END) AS dup_tag " +
             "FROM onboard_regular_packet orp " +
             "JOIN loco_packet lp ON orp.loco_packet_id = lp.id " +
-            "WHERE orp.source_loco_id = :locoId " +
+            "WHERE (:locoId IS NULL OR orp.source_loco_id = :locoId) " +
             "AND lp.at_date BETWEEN :fromDate AND :toDate";
 
         Query onboardQuery = entityManager.createNativeQuery(onboardSql);
