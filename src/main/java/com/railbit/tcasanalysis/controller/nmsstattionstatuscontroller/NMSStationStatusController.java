@@ -2,7 +2,7 @@ package com.railbit.tcasanalysis.controller.nmsstattionstatuscontroller;
 
 import com.railbit.tcasanalysis.DTO.ResponseDTO;
 import com.railbit.tcasanalysis.entity.nmspackets.stationarypackets.NMSStationStatus;
-import com.railbit.tcasanalysis.repository.dslrepos.NMSStationStatusRepository;
+//import com.railbit.tcasanalysis.repository.dslrepos.NMSStationStatusRepository;
 import com.railbit.tcasanalysis.service.NMSStationStatusService;
 import com.railbit.tcasanalysis.util.Constants;
 import jakarta.validation.Valid;
@@ -23,21 +23,21 @@ import java.util.Map;
 public class NMSStationStatusController {
 
     private final NMSStationStatusService nmsStationStatusService;
-    private final NMSStationStatusRepository nmsStationStatusRepository;
+   // private final NMSStationStatusRepository nmsStationStatusRepository;
 
-    @GetMapping("/filter")
-    public ResponseDTO<List<NMSStationStatus>> getFilteredStations(
-            @RequestParam(required = false) Integer zoneId,
-            @RequestParam(required = false) Integer divisionId,
-            @RequestParam(required = false) String status,
-            @RequestParam(required = false) String searchQuery) {
-
-        return ResponseDTO.<List<NMSStationStatus>>builder()
-                .data(nmsStationStatusRepository.getFilteredStationStatuses(zoneId, divisionId, status, searchQuery))
-                .message(Constants.SUCCESS_MSG)
-                .status(HttpStatus.OK.value())
-                .build();
-    }
+//    @GetMapping("/filter")
+//    public ResponseDTO<List<NMSStationStatus>> getFilteredStations(
+//            @RequestParam(required = false) Integer zoneId,
+//            @RequestParam(required = false) Integer divisionId,
+//            @RequestParam(required = false) String status,
+//            @RequestParam(required = false) String searchQuery) {
+//
+//        return ResponseDTO.<List<NMSStationStatus>>builder()
+//                .data(nmsStationStatusRepository.getFilteredStationStatuses(zoneId, divisionId, status, searchQuery))
+//                .message(Constants.SUCCESS_MSG)
+//                .status(HttpStatus.OK.value())
+//                .build();
+//    }
     @GetMapping("/all")
     public ResponseDTO<?> getAllStationStatusWithoutPagination() {
         return ResponseDTO.<List<NMSStationStatus>>builder()
