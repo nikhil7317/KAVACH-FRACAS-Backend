@@ -35,7 +35,6 @@ public interface AlertAnalysisRepository extends JpaRepository<KavachAlert, Long
         LEFT JOIN kavach_alert_details kad ON ka.id = kad.kavach_alert_id
         WHERE ka.event_time >= CURDATE()
           AND ka.event_time < CURDATE() + INTERVAL 1 DAY
-          AND UPPER(ka.severity) = 'CRITICAL'
           AND NOT EXISTS (
               SELECT 1 FROM alert_message_config amc
               WHERE amc.enabled = false

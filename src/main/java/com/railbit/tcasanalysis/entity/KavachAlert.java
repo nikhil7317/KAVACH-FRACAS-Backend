@@ -106,4 +106,7 @@ public class KavachAlert {
 
     @PrePersist
     protected void onCreate() { createdAt = new Date(); }
+
+    @Column(name = "is_notified", nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    private Boolean isNotified = false;
 }

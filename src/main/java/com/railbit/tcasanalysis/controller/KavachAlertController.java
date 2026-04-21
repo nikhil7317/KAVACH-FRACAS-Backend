@@ -164,4 +164,33 @@ public class KavachAlertController {
             ));
         }
     }
+
+    @PatchMapping("/{id}/notify")
+    public ResponseEntity<?> markAsNotified(@PathVariable Long id) {
+        try {
+            int updated = alertRepository.markAsNotified(id);
+            if (updated == 0) {
+                return ResponseEntity.notFound().build();
+            }
+            return ResponseEntity.ok(Map.of("status", "success", "message", "Alert marked as notified"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(
+                    Map.of("status", "error", "message", e.getMessage()));
+        }
+    }
+
+    // Bulk endpoint — for marking multiple alerts seen at once
+    @PatchMapping("/notify-batch")
+    public ResponseEntity<?> markBatchAsNotified(@RequestBody List<Long> ids) {
+        try {
+            int updated = alertRepository.markAllAsNotified(ids);
+            return ResponseEntity.ok(Map.of(
+                    "status", "success",
+                    "updated", updated
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(
+                    Map.of("status", "error", "message", e.getMessage()));
+        }
+    }
 }
