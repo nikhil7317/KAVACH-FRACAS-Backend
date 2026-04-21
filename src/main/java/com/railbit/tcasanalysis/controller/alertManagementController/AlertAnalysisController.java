@@ -43,4 +43,19 @@ public class AlertAnalysisController {
             ));
         }
     }
+
+    @GetMapping("/stationHeatmap")
+    public ResponseEntity<?> getStationHeatmap() {
+        try {
+            return ResponseEntity.ok(Map.of(
+                    "status", "success",
+                    "data", service.getStationHeatmap()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "status", "error",
+                    "message", e.getMessage()
+            ));
+        }
+    }
 }

@@ -70,6 +70,45 @@ public class AlertAnalysisService {
                 )
         );
     }
+
+    public List<Map<String, Object>> getStationHeatmap() {
+
+        List<Object[]> rows = repo.getStationHeatmap();
+
+        // Map: station -> day -> count
+        Map<String, int[]> map = new LinkedHashMap<>();
+
+        for (Object[] r : rows) {
+            String station = r[0] != null ? r[0].toString() : "Unknown";
+            int day = ((Number) r[1]).intValue(); // 1=Sun ... 7=Sat
+            int count = ((Number) r[2]).intValue();
+
+            map.putIfAbsent(station, new int[7]);
+
+            // Convert to index (Mon=0 ... Sun=6)
+            int index = (day == 1) ? 6 : day - 2;
+            map.get(station)[index] = count;
+        }
+
+        List<String> days = List.of("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun");
+
+        List<Map<String, Object>> result = new ArrayList<>();
+
+        for (Map.Entry<String, int[]> entry : map.entrySet()) {
+            Map<String, Object> obj = new LinkedHashMap<>();
+            obj.put("station", entry.getKey());
+
+            int[] counts = entry.getValue();
+
+            for (int i = 0; i < 7; i++) {
+                obj.put(days.get(i), counts[i]);
+            }
+
+            result.add(obj);
+        }
+
+        return result;
+    }
     private Map<String, Object> pie(String label, long value, String color) {
         return Map.of(
                 "label", label,

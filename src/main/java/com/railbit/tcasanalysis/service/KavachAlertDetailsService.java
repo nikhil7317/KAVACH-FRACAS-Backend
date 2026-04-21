@@ -3,6 +3,7 @@ package com.railbit.tcasanalysis.service;
 import com.railbit.tcasanalysis.DTO.IncidentTrackDTO;
 import com.railbit.tcasanalysis.DTO.KavachAlertDetailsRequest;
 import com.railbit.tcasanalysis.DTO.KavachAlertDetailsResponseDTO;
+import com.railbit.tcasanalysis.entity.KavachAlert;
 import com.railbit.tcasanalysis.entity.KavachAlertDetails;
 import com.railbit.tcasanalysis.entity.IncidentTrack;
 import com.railbit.tcasanalysis.entity.User;
@@ -15,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -97,17 +99,26 @@ public class KavachAlertDetailsService {
     // ─── GET /alertDetails/{kavachAlertId} ───────────────────────────────────
 
     public KavachAlertDetailsResponseDTO getAlertDetailsWithTracks(Long kavachAlertId) {
+        KavachAlertDetailsResponseDTO response = new KavachAlertDetailsResponseDTO();
+
         KavachAlertDetails details = detailsRepository.findByKavachAlertId(kavachAlertId);
 
         if (details == null) {
-            throw new RuntimeException(
-                    "Alert details not found for kavach_alert_id: " + kavachAlertId);
+            // Fetch just the KavachAlert and return a partial response
+            KavachAlert kavachAlert = kavachAlertRepository.findById(kavachAlertId)
+                    .orElseThrow(() -> new RuntimeException(
+                            "No alert found for kavach_alert_id: " + kavachAlertId));
+
+            response.setKavachAlert(kavachAlert);
+            response.setIncidentTracks(Collections.emptyList());
+            response.setOemRemarksSubmitted(false);
+            return response;
         }
 
+        // --- existing logic below, unchanged ---
         List<IncidentTrack> tracks = incidentTrackRepository
                 .findByKavachAlertDetailsIdOrderByIncidentCreatedAtDesc(details.getId());
 
-        KavachAlertDetailsResponseDTO response = new KavachAlertDetailsResponseDTO();
         response.setId(details.getId());
         response.setKavachAlert(details.getKavachAlert());
         response.setCreatedUser(details.getCreatedUser());
@@ -116,7 +127,6 @@ public class KavachAlertDetailsService {
         response.setTicketStatus(details.getTicketStatus());
         response.setIncidentCreatedAt(details.getIncidentCreatedAt());
 
-        // ✅ Check oem_remarks table directly — clean and reliable
         boolean hasOemRemarks = oemRemarksRepository
                 .existsByKavachAlertDetailsId(details.getId());
         response.setOemRemarksSubmitted(hasOemRemarks);
