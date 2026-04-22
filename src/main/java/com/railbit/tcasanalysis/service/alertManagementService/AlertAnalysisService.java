@@ -116,4 +116,37 @@ public class AlertAnalysisService {
                 "color", color
         );
     }
+
+    public Map<String, Object> getCollisionVsSos() {
+
+        List<Object[]> rows = repo.getCollisionVsSosMonthly();
+
+        String[] months = {"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"};
+
+        int[] collision = new int[12];
+        int[] sos = new int[12];
+
+        for (Object[] r : rows) {
+            int month = ((Number) r[0]).intValue(); // 1-12
+
+            collision[month - 1] = ((Number) r[1]).intValue();
+            sos[month - 1] = ((Number) r[2]).intValue();
+        }
+
+        return Map.of(
+                "labels", months,
+                "datasets", List.of(
+                        dataset("Collision", "#9C27B0", collision),
+                        dataset("SOS", "#F44336", sos)
+                )
+        );
+    }
+
+    private Map<String, Object> dataset(String label, String color, int[] data) {
+        return Map.of(
+                "label", label,
+                "backgroundColor", color,
+                "data", data
+        );
+    }
 }

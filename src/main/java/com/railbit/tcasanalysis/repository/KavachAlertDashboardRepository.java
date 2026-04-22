@@ -79,19 +79,19 @@ public interface KavachAlertDashboardRepository extends JpaRepository<KavachAler
     // ── Station-wise ──────────────────────────────────────────────────────────
 
     @Query(value = """
-        SELECT s.code AS station_name, COUNT(*) AS cnt
-        FROM kavach_alert ka
-        LEFT JOIN station s ON ka.station_id = s.tcas_subsys_id
-        WHERE ka.event_time >= :fromDate AND ka.event_time < :toDate
-          AND ka.station_id IS NOT NULL AND ka.station_id <> 0
-          AND NOT EXISTS (
-              SELECT 1 FROM alert_message_config amc
-              WHERE amc.enabled = false
-                AND amc.alert_category = ka.alert_category
-                AND amc.alert_message  = ka.alert_message
-          )
-        GROUP BY s.code
-        ORDER BY cnt DESC
+            SELECT s.code AS station_name, COUNT(*) AS cnt
+            FROM kavach_alert ka
+            INNER JOIN station s ON ka.station_id = s.tcas_subsys_id
+            WHERE ka.event_time >= :fromDate AND ka.event_time < :toDate
+              AND ka.station_id IS NOT NULL AND ka.station_id <> 0
+              AND NOT EXISTS (
+                  SELECT 1 FROM alert_message_config amc
+                  WHERE amc.enabled = false
+                    AND amc.alert_category = ka.alert_category
+                    AND amc.alert_message  = ka.alert_message
+              )
+            GROUP BY s.code
+            ORDER BY cnt DESC
         """, nativeQuery = true)
     List<Object[]> countByStationId(@Param("fromDate") Date fromDate,
                                     @Param("toDate") Date toDate);

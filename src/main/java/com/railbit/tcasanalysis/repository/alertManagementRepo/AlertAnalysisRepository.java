@@ -63,4 +63,26 @@ public interface AlertAnalysisRepository extends JpaRepository<KavachAlert, Long
         GROUP BY s.name, day_num
         """, nativeQuery = true)
     List<Object[]> getStationHeatmap();
+
+    @Query(value = """
+        SELECT 
+            MONTH(ka.event_time) AS month,
+            
+            SUM(CASE 
+                WHEN LOWER(ka.alert_message) LIKE '%collision%' 
+                THEN 1 ELSE 0 END) AS collision_count,
+
+            SUM(CASE 
+                WHEN LOWER(ka.alert_category) = 'loco_sos' 
+                     OR LOWER(ka.alert_message) LIKE '%sos%' 
+                THEN 1 ELSE 0 END) AS sos_count
+
+        FROM kavach_alert ka
+
+        WHERE YEAR(ka.event_time) = YEAR(CURDATE())
+
+        GROUP BY month
+        ORDER BY month
+        """, nativeQuery = true)
+    List<Object[]> getCollisionVsSosMonthly();
 }

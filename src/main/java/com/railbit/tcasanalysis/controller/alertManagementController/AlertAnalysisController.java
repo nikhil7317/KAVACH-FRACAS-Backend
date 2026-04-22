@@ -58,4 +58,18 @@ public class AlertAnalysisController {
             ));
         }
     }
+    @GetMapping("/collisionVsSos")
+    public ResponseEntity<?> getCollisionVsSos() {
+        try {
+            return ResponseEntity.ok(Map.of(
+                    "status", "success",
+                    "data", service.getCollisionVsSos()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "status", "error",
+                    "message", e.getMessage()
+            ));
+        }
+    }
 }
