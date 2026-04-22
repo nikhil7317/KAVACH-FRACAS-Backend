@@ -69,9 +69,9 @@ public class KavachAlertController {
                 map.put("longitude",     row[14]);
                 map.put("createdAt",     row[15]);
                 map.put("lastRfidTag",   row[16]);
-                // LEFT JOIN columns from kavach_alert_details
-                map.put("ticketNo",      row[17]);
-                map.put("ticketStatus",  row[18]);
+                map.put("isNotified",    row[17]);
+                map.put("ticketNo",      row[18]);
+                map.put("ticketStatus",  row[19]);   
 
                 return map;
             }).collect(Collectors.toList());
