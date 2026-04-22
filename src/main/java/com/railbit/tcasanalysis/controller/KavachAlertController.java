@@ -71,7 +71,7 @@ public class KavachAlertController {
                 map.put("lastRfidTag",   row[16]);
                 map.put("isNotified",    row[17]);
                 map.put("ticketNo",      row[18]);
-                map.put("ticketStatus",  row[19]);   
+                map.put("ticketStatus",  row[19]);
 
                 return map;
             }).collect(Collectors.toList());
@@ -187,6 +187,50 @@ public class KavachAlertController {
             return ResponseEntity.ok(Map.of(
                     "status", "success",
                     "updated", updated
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(
+                    Map.of("status", "error", "message", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/alertNotifications")
+    public ResponseEntity<?> getAlertNotifications(
+            @RequestParam("fromDate") @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date fromDate,
+            @RequestParam("toDate")   @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date toDate) {
+
+        try {
+            List<Object[]> results = alertRepository.findLatest10Alerts(fromDate, toDate);
+
+            List<Map<String, Object>> alerts = results.stream().map(row -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("id",            row[0]);
+                map.put("eventTime",     row[1]);
+                map.put("locoId",        row[2]);
+                map.put("stationId",     row[3]);
+                map.put("alertCategory", row[4]);
+                map.put("alertCode",     row[5]);
+                map.put("alertMessage",  row[6]);
+                map.put("severity",      row[7]);
+                map.put("sourcePktType", row[8]);
+                map.put("locoPacketId",  row[9]);
+                map.put("trainSpeed",    row[10]);
+                map.put("locoMode",      row[11]);
+                map.put("absLocoLoc",    row[12]);
+                map.put("latitude",      row[13]);
+                map.put("longitude",     row[14]);
+                map.put("createdAt",     row[15]);
+                map.put("lastRfidTag",   row[16]);
+                map.put("isNotified",    row[17]);
+                map.put("ticketNo",      row[18]);
+                map.put("ticketStatus",  row[19]);
+                return map;
+            }).collect(Collectors.toList());
+
+            return ResponseEntity.ok(Map.of(
+                    "status", "success",
+                    "count",  alerts.size(),
+                    "data",   alerts
             ));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(

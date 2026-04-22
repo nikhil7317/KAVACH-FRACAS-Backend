@@ -104,6 +104,43 @@ public interface KavachAlertRepository extends JpaRepository<KavachAlert, Long> 
             @Param("category") String category,
             Pageable pageable);
 
+    @Query(value = """
+    SELECT ka.id,
+           ka.event_time,
+           ka.loco_id,
+           ka.station_id,
+           ka.alert_category,
+           ka.alert_code,
+           ka.alert_message,
+           ka.severity,
+           ka.source_pkt_type,
+           ka.loco_packet_id,
+           ka.train_speed,
+           ka.loco_mode,
+           ka.abs_loco_loc,
+           ka.latitude,
+           ka.longitude,
+           ka.created_at,
+           ka.last_rfid_tag,
+           ka.is_notified,
+           kad.ticket_no,
+           kad.ticket_status
+    FROM kavach_alert ka
+    LEFT JOIN kavach_alert_details kad ON kad.kavach_alert_id = ka.id
+    WHERE ka.event_time BETWEEN :from AND :to
+      AND NOT EXISTS (
+          SELECT 1 FROM alert_message_config amc
+          WHERE amc.enabled = false
+            AND amc.alert_category = ka.alert_category
+            AND amc.alert_message  = ka.alert_message
+      )
+    ORDER BY ka.event_time DESC
+    LIMIT 10
+    """, nativeQuery = true)
+    List<Object[]> findLatest10Alerts(
+            @Param("from") Date from,
+            @Param("to") Date to);
+
     @Query("SELECT DISTINCT k.alertCode, k.alertMessage FROM KavachAlert k WHERE k.alertCategory = :category")
     List<Object[]> findDistinctAlertCodeAndMessage(@Param("category") String category);
 
