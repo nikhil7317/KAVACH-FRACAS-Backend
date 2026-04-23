@@ -63,7 +63,7 @@ public interface KavachAlertRepository extends JpaRepository<KavachAlert, Long> 
     SELECT ka.id,
            ka.event_time,
            ka.loco_id,
-           ka.station_id,
+           s.code AS station_code,   -- ✅ CHANGED
            ka.alert_category,
            ka.alert_code,
            ka.alert_message,
@@ -82,6 +82,7 @@ public interface KavachAlertRepository extends JpaRepository<KavachAlert, Long> 
            kad.ticket_status
     FROM kavach_alert ka
     LEFT JOIN kavach_alert_details kad ON kad.kavach_alert_id = ka.id
+    LEFT JOIN station s ON ka.station_id = s.tcas_subsys_id   -- ✅ JOIN ADDED
     WHERE ka.event_time BETWEEN :from AND :to
       AND (:locoId IS NULL OR ka.loco_id = :locoId)
       AND (:stnId IS NULL OR ka.station_id = :stnId)
