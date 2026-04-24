@@ -41,17 +41,19 @@ public class KavachAlertController {
             @RequestParam(value = "locoId",    required = false) Integer locoId,
             @RequestParam(value = "stnId",     required = false) Integer stnId,
             @RequestParam(value = "severity",  required = false) String severity,
-            @RequestParam(value = "category",  required = false) String category) {
+            @RequestParam(value = "category",  required = false) String category,
+            @RequestParam(value = "userId", required = false) Integer userId) {  // ← NEW PARAMETER
 
         try {
             Pageable pageable = PageRequest.of(0, 100);
+
+
+
             List<Object[]> results = alertRepository.findByFiltersWithDetails(
-                    fromDate, toDate, locoId, stnId, severity, category, pageable);
+                    fromDate, toDate, locoId, stnId, severity, category, userId, pageable);
 
             List<Map<String, Object>> alerts = results.stream().map(row -> {
                 Map<String, Object> map = new HashMap<>();
-
-                // Native query returns raw columns — cast carefully
                 map.put("id",            row[0]);
                 map.put("eventTime",     row[1]);
                 map.put("locoId",        row[2]);
@@ -72,7 +74,6 @@ public class KavachAlertController {
                 map.put("isNotified",    row[17]);
                 map.put("ticketNo",      row[18]);
                 map.put("ticketStatus",  row[19]);
-
                 return map;
             }).collect(Collectors.toList());
 
@@ -85,7 +86,8 @@ public class KavachAlertController {
                             "locoId",   locoId   != null ? locoId   : "all",
                             "stnId",    stnId    != null ? stnId    : "all",
                             "severity", severity != null ? severity : "all",
-                            "category", category != null ? category : "all"
+                            "category", category != null ? category : "all",
+                            "userId", userId != null ? userId : "none"
                     ),
                     "data", alerts
             ));

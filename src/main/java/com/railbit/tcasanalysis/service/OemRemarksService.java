@@ -54,8 +54,10 @@ public class OemRemarksService {
         Integer designationId = createdUser.getDesignation() != null
                 ? createdUser.getDesignation().getId()
                 : null;
-        if (designationId == null || designationId != 2) {
-            throw new RuntimeException("Only OEM users can submit OEM remarks");
+        // ✅ Allow ONLY assigned user (OEM or Railway)
+        if (details.getAssignedTo() == null ||
+                !details.getAssignedTo().getId().equals(createdUser.getId())) {
+            throw new RuntimeException("Only assigned user can submit remarks");
         }
 
         OemRemarks remark = new OemRemarks();
@@ -96,6 +98,7 @@ public class OemRemarksService {
 
     private OemRemarksResponseDTO toResponseDTO(OemRemarks remark) {
         OemRemarksResponseDTO dto = new OemRemarksResponseDTO();
+
         dto.setId(remark.getId());
         dto.setKavachAlertDetailsId(remark.getKavachAlertDetails().getId());
         dto.setTicketNo(remark.getKavachAlertDetails().getTicketNo());
@@ -107,6 +110,7 @@ public class OemRemarksService {
             userInfo.setId(remark.getCreatedUser().getId());
             userInfo.setName(remark.getCreatedUser().getName());
 
+            // ✅ DESIGNATION
             if (remark.getCreatedUser().getDesignation() != null) {
                 OemRemarksResponseDTO.UserInfo.DesignationInfo desig =
                         new OemRemarksResponseDTO.UserInfo.DesignationInfo();
@@ -114,6 +118,15 @@ public class OemRemarksService {
                 desig.setName(remark.getCreatedUser().getDesignation().getName());
                 desig.setTitle(remark.getCreatedUser().getDesignation().getTitle());
                 userInfo.setDesignation(desig);
+            }
+
+            // ✅ ROLE (NEW ADDITION)
+            if (remark.getCreatedUser().getRole() != null) {
+                OemRemarksResponseDTO.UserInfo.RoleInfo role =
+                        new OemRemarksResponseDTO.UserInfo.RoleInfo();
+                role.setId(remark.getCreatedUser().getRole().getId());
+                role.setName(remark.getCreatedUser().getRole().getName());
+                userInfo.setRole(role);
             }
 
             dto.setCreatedUser(userInfo);

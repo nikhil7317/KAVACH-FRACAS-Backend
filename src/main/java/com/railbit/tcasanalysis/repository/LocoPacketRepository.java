@@ -54,4 +54,6 @@ public interface LocoPacketRepository extends JpaRepository<LocoPacket, Long> {
             @Param("toDate") Date toDate,
             @Param("locoId") Integer locoId,
             @Param("stnId") Integer stnId);
+
+
 }
