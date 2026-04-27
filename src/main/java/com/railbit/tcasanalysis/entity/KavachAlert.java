@@ -109,4 +109,7 @@ public class KavachAlert {
 
     @Column(name = "is_notified", nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
     private Boolean isNotified = false;
+
+    @Column(name = "is_popup_dialog_ack", nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    private Boolean isPopupDialogAck = false;
 }

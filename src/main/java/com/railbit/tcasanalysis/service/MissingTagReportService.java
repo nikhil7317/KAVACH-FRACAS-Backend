@@ -27,14 +27,18 @@ public class MissingTagReportService {
      * @param locoId   optional - filter by loco
      * @return list of tag events + summary counts
      */
-    public Map<String, Object> getMissingTagReport(Date fromDate, Date toDate, Integer locoId, Integer alertCode, String severity, Integer stnId  ) {
+    public Map<String, Object> getMissingTagReport(
+            Date fromDate, Date toDate,
+            Integer locoId, Integer alertCode,
+            String severity, String stnCode){
 
         // 1. Fetch all TAG_LINK alerts
         String sql =
-                "SELECT a.event_time, a.loco_id, a.station_id, a.alert_code, " +
+                "SELECT a.event_time, a.loco_id, s.code AS station_code, a.alert_code, " +
                         "       a.alert_message, a.last_rfid_tag, a.train_speed, " +
                         "       a.loco_mode, a.abs_loco_loc, a.alert_category, a.source_pkt_type, a.severity " +
                         "FROM kavach_alert a " +
+                        "LEFT JOIN station s ON a.station_id = s.tcas_subsys_id " +
                         "WHERE a.alert_category IN ('TAG_LINK', 'RFID_ISSUE') " +
                         "AND a.event_time BETWEEN :fromDate AND :toDate ";
 
@@ -48,8 +52,8 @@ public class MissingTagReportService {
         if (severity != null && !severity.isEmpty()) {
             sql += "AND a.severity = :severity ";
         }
-        if (stnId != null) {
-            sql += "AND a.station_id = :stnId ";
+        if (stnCode != null && !stnCode.isEmpty()) {
+            sql += "AND s.code = :stnCode ";
         }
         sql += "ORDER BY a.event_time DESC";
 
@@ -66,8 +70,8 @@ public class MissingTagReportService {
         if (severity != null && !severity.isEmpty()) {
             query.setParameter("severity", severity);
         }
-        if (stnId != null) {
-            query.setParameter("stnId", stnId);
+        if (stnCode != null && !stnCode.isEmpty()) {
+            query.setParameter("stnCode", stnCode);
         }
 
         List<Object[]> rows = query.getResultList();
@@ -83,7 +87,7 @@ public class MissingTagReportService {
             Map<String, Object> event = new LinkedHashMap<>();
             event.put("eventTime", row[0]);
             event.put("locoId", row[1]);
-            event.put("stationId", row[2]);
+            event.put("stationCode", row[2]);
             event.put("alertCode", row[3]);
             event.put("alertMessage", row[4]);
             event.put("lastRfidTag", row[5]);

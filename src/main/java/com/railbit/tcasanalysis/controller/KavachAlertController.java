@@ -39,7 +39,7 @@ public class KavachAlertController {
             @RequestParam("fromDate") @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date fromDate,
             @RequestParam("toDate")   @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date toDate,
             @RequestParam(value = "locoId",    required = false) Integer locoId,
-            @RequestParam(value = "stnId",     required = false) Integer stnId,
+            @RequestParam(value = "stnCode", required = false) String stnCode,
             @RequestParam(value = "severity",  required = false) String severity,
             @RequestParam(value = "category",  required = false) String category,
             @RequestParam(value = "userId", required = false) Integer userId) {  // ← NEW PARAMETER
@@ -50,14 +50,14 @@ public class KavachAlertController {
 
 
             List<Object[]> results = alertRepository.findByFiltersWithDetails(
-                    fromDate, toDate, locoId, stnId, severity, category, userId, pageable);
+                    fromDate, toDate, locoId, stnCode, severity, category, userId, pageable);
 
             List<Map<String, Object>> alerts = results.stream().map(row -> {
                 Map<String, Object> map = new HashMap<>();
                 map.put("id",            row[0]);
                 map.put("eventTime",     row[1]);
                 map.put("locoId",        row[2]);
-                map.put("stationId",     row[3]);
+                map.put("stationCode",   row[3]);
                 map.put("alertCategory", row[4]);
                 map.put("alertCode",     row[5]);
                 map.put("alertMessage",  row[6]);
@@ -74,6 +74,8 @@ public class KavachAlertController {
                 map.put("isNotified",    row[17]);
                 map.put("ticketNo",      row[18]);
                 map.put("ticketStatus",  row[19]);
+                map.put("isPopupDialogAck", row[20]);
+                map.put("adminRemarks",  row[21]);
                 return map;
             }).collect(Collectors.toList());
 
@@ -84,7 +86,7 @@ public class KavachAlertController {
                             "fromDate", fromDate,
                             "toDate",   toDate,
                             "locoId",   locoId   != null ? locoId   : "all",
-                            "stnId",    stnId    != null ? stnId    : "all",
+                            "stnCode", stnCode != null ? stnCode : "all",
                             "severity", severity != null ? severity : "all",
                             "category", category != null ? category : "all",
                             "userId", userId != null ? userId : "none"
@@ -226,6 +228,7 @@ public class KavachAlertController {
                 map.put("isNotified",    row[17]);
                 map.put("ticketNo",      row[18]);
                 map.put("ticketStatus",  row[19]);
+
                 return map;
             }).collect(Collectors.toList());
 
@@ -234,6 +237,26 @@ public class KavachAlertController {
                     "count",  alerts.size(),
                     "data",   alerts
             ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(
+                    Map.of("status", "error", "message", e.getMessage()));
+        }
+    }
+    @PostMapping("/ack-popup")
+    public ResponseEntity<?> acknowledgePopup(
+            @RequestParam("alertId") Long alertId) {
+        try {
+            KavachAlert alert = alertRepository
+                    .findById(alertId)
+                    .orElseThrow(() -> new RuntimeException("Alert not found: " + alertId));
+
+            alert.setIsPopupDialogAck(true);
+            alertRepository.save(alert);
+
+            return ResponseEntity.ok(Map.of(
+                    "status",  "success",
+                    "alertId", alertId,
+                    "acked",   true));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(
                     Map.of("status", "error", "message", e.getMessage()));

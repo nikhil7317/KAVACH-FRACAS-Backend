@@ -79,13 +79,22 @@ SELECT ka.id,
        ka.last_rfid_tag,
        ka.is_notified,
        kad.ticket_no,
-       kad.ticket_status
+       kad.ticket_status,
+       ka.is_popup_dialog_ack,
+       (
+         SELECT it.ticket_remarks
+         FROM incident_track it
+         WHERE it.kavach_alert_details_id = kad.id
+         AND it.ticket_status = 'OPEN'
+         ORDER BY it.incident_created_at DESC
+         LIMIT 1
+         ) AS admin_remarks
 FROM kavach_alert ka
 LEFT JOIN kavach_alert_details kad ON kad.kavach_alert_id = ka.id
 LEFT JOIN station s ON ka.station_id = s.tcas_subsys_id
 WHERE ka.event_time BETWEEN :from AND :to
   AND (:locoId IS NULL OR ka.loco_id = :locoId)
-  AND (:stnId IS NULL OR ka.station_id = :stnId)
+  AND (:stnCode IS NULL OR s.code = :stnCode)
   AND (:severity IS NULL OR ka.severity = :severity)
   AND (:category IS NULL OR ka.alert_category = :category)
   AND NOT EXISTS (
@@ -94,7 +103,6 @@ WHERE ka.event_time BETWEEN :from AND :to
         AND amc.alert_category = ka.alert_category
         AND amc.alert_message  = ka.alert_message
   )
-  /* ── OEM FILTER: Only show OPEN or RE-ASSIGN tickets ── */
   AND (
         :userId IS NULL
          OR (
@@ -108,10 +116,10 @@ ORDER BY ka.event_time DESC
             @Param("from") Date from,
             @Param("to") Date to,
             @Param("locoId") Integer locoId,
-            @Param("stnId") Integer stnId,
+            @Param("stnCode") String stnCode,
             @Param("severity") String severity,
             @Param("category") String category,
-            @Param("userId") Integer userId , // ← NEW
+            @Param("userId") Integer userId,
             Pageable pageable);
 
     @Query(value = """

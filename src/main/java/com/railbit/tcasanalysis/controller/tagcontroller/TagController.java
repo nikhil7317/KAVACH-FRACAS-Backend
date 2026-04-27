@@ -97,16 +97,23 @@ public class TagController {
 
     @GetMapping("/missing-tags")
     public ResponseEntity<?> getMissingTagReport(
-            @RequestParam("fromDate") @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date fromDate,
-            @RequestParam("toDate") @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date toDate,
+
+            @RequestParam("fromDate")
+            @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date fromDate,
+
+            @RequestParam("toDate")
+            @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date toDate,
+
             @RequestParam(value = "locoId", required = false) Integer locoId,
             @RequestParam(value = "alertCode", required = false) Integer alertCode,
             @RequestParam(value = "severity", required = false) String severity,
-            @RequestParam(value = "stnId", required = false) Integer stnId
+
+            @RequestParam(value = "stnCode", required = false) String stnCode   // ✅ CHANGED
     ) {
 
         Map<String, Object> report =
-                missingTagReportService.getMissingTagReport(fromDate, toDate, locoId, alertCode, severity, stnId);
+                missingTagReportService.getMissingTagReport(
+                        fromDate, toDate, locoId, alertCode, severity, stnCode);
 
         return ResponseEntity.ok(Map.of(
                 "status", "success",
@@ -116,7 +123,7 @@ public class TagController {
                         "locoId", locoId != null ? locoId : "all",
                         "alertCode", alertCode != null ? alertCode : "all",
                         "severity", severity != null ? severity : "all",
-                        "stnId", stnId != null ? stnId : "all"
+                        "stnCode", stnCode != null ? stnCode : "all"   // ✅ UPDATED
                 ),
                 "report", report
         ));
