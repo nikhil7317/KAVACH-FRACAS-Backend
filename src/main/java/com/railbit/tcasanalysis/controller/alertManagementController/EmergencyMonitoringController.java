@@ -10,13 +10,13 @@ import org.springframework.web.bind.annotation.*;
         import java.util.Map;
 
 @RestController
-@RequestMapping("/tcasapi/emergencyMonitoring")
+@RequestMapping("/tcasapi/alerts")
 public class EmergencyMonitoringController {
 
     @Autowired
     private EmergencyMonitoringService service;
 
-    @GetMapping
+    @GetMapping("/emergencyMonitorings")
     public ResponseEntity<?> getSeverityMonitoring() {
         try {
             return ResponseEntity.ok(Map.of(

@@ -45,25 +45,25 @@ public interface AlertAnalysisRepository extends JpaRepository<KavachAlert, Long
     List<Object[]> getResolutionStatusToday();
 
     @Query(value = """
-        SELECT 
-            s.name AS station_name,
-            DAYOFWEEK(ka.event_time) AS day_num,
-            DATE(ka.event_time) AS event_date,  
-            COUNT(*) AS cnt
-        FROM kavach_alert ka
-        LEFT JOIN station s ON ka.station_id = s.tcas_subsys_id
-        WHERE ka.event_time >= CURDATE() - INTERVAL 6 DAY
-          AND ka.event_time < CURDATE() + INTERVAL 1 DAY
-          AND s.name IS NOT NULL
-          AND NOT EXISTS (
-              SELECT 1 FROM alert_message_config amc
-              WHERE amc.enabled = false
-                AND amc.alert_category = ka.alert_category
-                AND amc.alert_message = ka.alert_message
-          )
-        GROUP BY s.name, day_num, event_date
-        ORDER BY event_date
-        """, nativeQuery = true)
+    SELECT 
+        s.name AS station_name,
+        DAYOFWEEK(ka.event_time) AS day_num,
+        DATE(ka.event_time) AS event_date,  
+        COUNT(*) AS cnt
+    FROM kavach_alert ka
+    LEFT JOIN station s ON ka.station_id = s.tcas_subsys_id
+           WHERE ka.event_time >= DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)
+           AND ka.event_time < CURDATE() + INTERVAL 1 DAY
+      AND s.name IS NOT NULL
+      AND NOT EXISTS (
+          SELECT 1 FROM alert_message_config amc
+          WHERE amc.enabled = false
+            AND amc.alert_category = ka.alert_category
+            AND amc.alert_message = ka.alert_message
+      )
+    GROUP BY s.name, day_num, event_date
+    ORDER BY event_date
+    """, nativeQuery = true)
     List<Object[]> getStationHeatmap();
 
     @Query(value = """

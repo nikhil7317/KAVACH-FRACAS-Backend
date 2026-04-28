@@ -76,59 +76,53 @@ public class AlertAnalysisService {
 
         List<Object[]> rows = repo.getStationHeatmap();
 
-        // Map: station -> day -> count
-        Map<String, int[]> map = new LinkedHashMap<>();
-
-        // ✅ Sun → Sat order (as per your requirement)
-        String[] days = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
-
-        // ✅ Generate full current week (Sun → Sat)
-        Map<String, String> dayDateMap = new LinkedHashMap<>();
+        // ✅ Changed: Mon → Sun order
+        String[] days = {"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
 
         LocalDate today = LocalDate.now();
 
-        // Get Sunday of current week
-        LocalDate startOfWeek = today.minusDays(today.getDayOfWeek().getValue() % 7);
+        // ✅ Find this week's Monday (ISO start of week)
+        int isoDow = today.getDayOfWeek().getValue(); // Mon=1 ... Sun=7
+        LocalDate startOfWeek = today.minusDays(isoDow - 1); // always lands on Monday
 
+        // ✅ Only generate dates from Monday UP TO today
+        Map<String, String> dayDateMap = new LinkedHashMap<>();
         for (int i = 0; i < 7; i++) {
             LocalDate date = startOfWeek.plusDays(i);
-            dayDateMap.put(days[i], date.toString());
+            if (!date.isAfter(today)) {
+                dayDateMap.put(days[i], date.toString());
+            }
         }
 
-        // ✅ Fill data from DB
+        // Fill station data
+        Map<String, int[]> map = new LinkedHashMap<>();
         for (Object[] r : rows) {
-
             String station = r[0] != null ? r[0].toString() : "";
-            int day = ((Number) r[1]).intValue();   // 1=Sun ... 7=Sat
+            int mysqlDay = ((Number) r[1]).intValue(); // MySQL DAYOFWEEK: 1=Sun,2=Mon...7=Sat
+
+            // ✅ Remap MySQL day to Mon-based index (Mon=0 ... Sun=6)
+            int index = (mysqlDay == 1) ? 6 : mysqlDay - 2; // Sun→6, Mon→0, Tue→1 ... Sat→5
+
             int count = ((Number) r[3]).intValue();
-
             map.putIfAbsent(station, new int[7]);
-
-            int index = day - 1; // Sun=0 ... Sat=6
             map.get(station)[index] = count;
         }
 
-        // ✅ Build final response
+        // Build result — only include days up to today
         List<Map<String, Object>> result = new ArrayList<>();
-
         for (Map.Entry<String, int[]> entry : map.entrySet()) {
-
             Map<String, Object> obj = new LinkedHashMap<>();
             obj.put("station", entry.getKey());
-
             int[] counts = entry.getValue();
-
             for (int i = 0; i < 7; i++) {
-                obj.put(days[i], counts[i]);
+                if (dayDateMap.containsKey(days[i])) {
+                    obj.put(days[i], counts[i]);
+                }
             }
-
             result.add(obj);
         }
 
-        return Map.of(
-                "dates", dayDateMap,
-                "data", result
-        );
+        return Map.of("dates", dayDateMap, "data", result);
     }
     private Map<String, Object> pie(String label, long value, String color) {
         return Map.of(
