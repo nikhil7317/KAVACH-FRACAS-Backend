@@ -50,6 +50,7 @@ public class WebSecurityConfiguration {
 			"/tcasapi/test",
 			"/resources/**",
 			"/tcasapi/resources/",
+			"/tcasapi/config/**",
 			"/ws"
 	};
 	@Bean
