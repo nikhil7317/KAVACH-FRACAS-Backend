@@ -40,7 +40,15 @@ public class MissingTagReportService {
                         "FROM kavach_alert a " +
                         "LEFT JOIN station s ON a.station_id = s.tcas_subsys_id " +
                         "WHERE a.alert_category IN ('TAG_LINK', 'RFID_ISSUE') " +
-                        "AND a.event_time BETWEEN :fromDate AND :toDate ";
+                        "AND a.event_time BETWEEN :fromDate AND :toDate " +
+
+                        // ✅ ADD THIS BLOCK
+                        "AND NOT EXISTS ( " +
+                        "    SELECT 1 FROM alert_message_config amc " +
+                        "    WHERE amc.enabled = false " +
+                        "      AND amc.alert_category = a.alert_category " +
+                        "      AND amc.alert_message = a.alert_message " +
+                        ") ";
 
         if (locoId != null) {
             sql += "AND a.loco_id = :locoId ";

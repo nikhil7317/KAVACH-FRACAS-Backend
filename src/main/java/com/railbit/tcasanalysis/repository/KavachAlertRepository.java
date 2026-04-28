@@ -154,6 +154,10 @@ ORDER BY ka.event_time DESC
     FROM kavach_alert ka
     LEFT JOIN kavach_alert_details kad ON kad.kavach_alert_id = ka.id
     WHERE ka.event_time BETWEEN :from AND :to
+
+      -- ✅ ADDED (CRITICAL FILTER)
+      AND UPPER(ka.severity) = 'CRITICAL'
+
       AND NOT EXISTS (
           SELECT 1 FROM alert_message_config amc
           WHERE amc.enabled = false
