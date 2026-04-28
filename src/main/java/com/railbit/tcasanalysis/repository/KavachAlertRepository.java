@@ -88,7 +88,7 @@ SELECT ka.id,
          AND it.ticket_status = 'OPEN'
          ORDER BY it.incident_created_at DESC
          LIMIT 1
-         ) AS admin_remarks
+       ) AS admin_remarks
 FROM kavach_alert ka
 LEFT JOIN kavach_alert_details kad ON kad.kavach_alert_id = ka.id
 LEFT JOIN station s ON ka.station_id = s.tcas_subsys_id
@@ -97,6 +97,13 @@ WHERE ka.event_time BETWEEN :from AND :to
   AND (:stnCode IS NULL OR s.code = :stnCode)
   AND (:severity IS NULL OR ka.severity = :severity)
   AND (:category IS NULL OR ka.alert_category = :category)
+
+  -- ✅ NEW FILTER
+  AND (
+        :ticketStatus IS NULL
+        OR UPPER(kad.ticket_status) = UPPER(:ticketStatus)
+      )
+
   AND NOT EXISTS (
       SELECT 1 FROM alert_message_config amc
       WHERE amc.enabled = false
@@ -108,8 +115,8 @@ WHERE ka.event_time BETWEEN :from AND :to
          OR (
                kad.assigned_to_id = :userId
                AND kad.ticket_status IN ('OPEN', 'RE-ASSIGN', 'REASSIGN')
-               )
-         )
+             )
+      )
 ORDER BY ka.event_time DESC
 """, nativeQuery = true)
     List<Object[]> findByFiltersWithDetails(
@@ -120,6 +127,7 @@ ORDER BY ka.event_time DESC
             @Param("severity") String severity,
             @Param("category") String category,
             @Param("userId") Integer userId,
+            @Param("ticketStatus") String ticketStatus,
             Pageable pageable);
 
     @Query(value = """
@@ -169,7 +177,15 @@ ORDER BY ka.event_time DESC
     @Query(value = "SELECT a.alert_message, s.name AS station_name, a.event_time " +
             "FROM kavach_alert a " +
             "LEFT JOIN station s ON a.station_id = s.tcas_subsys_id " +
-            "WHERE DATE(a.event_time) = CURRENT_DATE " +
+            "WHERE a.event_time >= CURDATE() " +
+            "AND a.event_time < CURDATE() + INTERVAL 1 DAY " +
+            "AND UPPER(a.severity) = 'CRITICAL' " +
+            "AND NOT EXISTS ( " +
+            "    SELECT 1 FROM alert_message_config amc " +
+            "    WHERE amc.enabled = false " +
+            "      AND amc.alert_category = a.alert_category " +
+            "      AND amc.alert_message = a.alert_message " +
+            ") " +
             "ORDER BY a.event_time DESC " +
             "LIMIT 10",
             nativeQuery = true)

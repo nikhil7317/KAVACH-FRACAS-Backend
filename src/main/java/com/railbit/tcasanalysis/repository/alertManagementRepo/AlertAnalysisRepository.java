@@ -48,6 +48,7 @@ public interface AlertAnalysisRepository extends JpaRepository<KavachAlert, Long
         SELECT 
             s.name AS station_name,
             DAYOFWEEK(ka.event_time) AS day_num,
+            DATE(ka.event_time) AS event_date,  
             COUNT(*) AS cnt
         FROM kavach_alert ka
         LEFT JOIN station s ON ka.station_id = s.tcas_subsys_id
@@ -60,7 +61,8 @@ public interface AlertAnalysisRepository extends JpaRepository<KavachAlert, Long
                 AND amc.alert_category = ka.alert_category
                 AND amc.alert_message = ka.alert_message
           )
-        GROUP BY s.name, day_num
+        GROUP BY s.name, day_num, event_date
+        ORDER BY event_date
         """, nativeQuery = true)
     List<Object[]> getStationHeatmap();
 
