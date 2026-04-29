@@ -58,25 +58,26 @@ public class KavachAlertController {
                 map.put("id",            row[0]);
                 map.put("eventTime",     row[1]);
                 map.put("locoId",        row[2]);
-                map.put("stationCode",   row[3]);
-                map.put("alertCategory", row[4]);
-                map.put("alertCode",     row[5]);
-                map.put("alertMessage",  row[6]);
-                map.put("severity",      row[7]);
-                map.put("sourcePktType", row[8]);
-                map.put("locoPacketId",  row[9]);
-                map.put("trainSpeed",    row[10]);
-                map.put("locoMode",      row[11]);
-                map.put("absLocoLoc",    row[12]);
-                map.put("latitude",      row[13]);
-                map.put("longitude",     row[14]);
-                map.put("createdAt",     row[15]);
-                map.put("lastRfidTag",   row[16]);
-                map.put("isNotified",    row[17]);
-                map.put("ticketNo",      row[18]);
-                map.put("ticketStatus",  row[19]);
-                map.put("isPopupDialogAck", row[20]);
-                map.put("adminRemarks",  row[21]);
+                map.put("stationId",     row[3]);   // ✅ NEW
+                map.put("stationCode",   row[4]);   // shifted
+                map.put("alertCategory", row[5]);
+                map.put("alertCode",     row[6]);
+                map.put("alertMessage",  row[7]);
+                map.put("severity",      row[8]);
+                map.put("sourcePktType", row[9]);
+                map.put("locoPacketId",  row[10]);
+                map.put("trainSpeed",    row[11]);
+                map.put("locoMode",      row[12]);
+                map.put("absLocoLoc",    row[13]);
+                map.put("latitude",      row[14]);
+                map.put("longitude",     row[15]);
+                map.put("createdAt",     row[16]);
+                map.put("lastRfidTag",   row[17]);
+                map.put("isNotified",    row[18]);
+                map.put("ticketNo",      row[19]);
+                map.put("ticketStatus",  row[20]);
+                map.put("isPopupDialogAck", row[21]);
+                map.put("adminRemarks",  row[22]);
                 return map;
             }).collect(Collectors.toList());
 

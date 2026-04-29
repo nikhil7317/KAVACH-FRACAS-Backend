@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @RestController
@@ -17,15 +18,20 @@ public class AlertCardsCount {
     @GetMapping("/today")
     public ResponseEntity<?> getTodayAlertCards() {
         try {
-            return ResponseEntity.ok(Map.of(
-                    "status", "success",
-                    "data", service.getTodayAlertCards()
-            ));
+            Object data = service.getTodayAlertCards();
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "success");
+            response.put("data", data != null ? data : new HashMap<>());
+
+            return ResponseEntity.ok(response);
+
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "status", "error",
-                    "message", e.getMessage()
-            ));
+            Map<String, Object> error = new HashMap<>();
+            error.put("status", "error");
+            error.put("message", e.getMessage() != null ? e.getMessage() : "Something went wrong");
+
+            return ResponseEntity.badRequest().body(error);
         }
     }
 }

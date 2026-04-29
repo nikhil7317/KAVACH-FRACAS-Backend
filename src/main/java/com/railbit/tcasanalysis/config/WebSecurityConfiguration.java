@@ -31,21 +31,29 @@ import org.springframework.web.reactive.function.client.WebClient;
 @AllArgsConstructor
 public class WebSecurityConfiguration {
 	private JwtAuthenticationFilter jwtFilter;
-	private static final String[] PUBLIC_URL={
+	private static final String[] PUBLIC_URL = {
 			"/tcasapi/login/",
 			"/tcasapi/analysis/",
 			"/tcasapi/traffic/**",
-			"/tcasapi/web/login"
-			,"/tcasapi/user/sendRegistrationOtp/"
-			,"/tcasapi/user/verifyUser/"
-			,"/tcasapi/faultPacket/addFaultyPacket/"
-			,"/tcasapi/stationaryPacket/addStationaryPacket/"
-			,"/tcasapi/locomovement/addLocoMovementData/"
-			,"/tcasapi/v1/auth/**"
-			,"/v3/api-docs/**","/api-docs"
-			,"/swagger-resources/**"
-			,"/swagger-ui/**"
-			,"/webjars/**",
+			"/tcasapi/web/login",
+			"/tcasapi/user/sendRegistrationOtp/",
+			"/tcasapi/user/verifyUser/",
+			"/tcasapi/faultPacket/addFaultyPacket/",
+			"/tcasapi/stationaryPacket/addStationaryPacket/",
+			"/tcasapi/locomovement/addLocoMovementData/",
+			"/tcasapi/v1/auth/**",
+
+			// ✅ ADD THESE
+			"/tcasapi/alertAnalysis/**",
+			"/tcasapi/alertCards/**",
+			"/tcasapi/alertLog/**",
+			"/tcasapi/alerts/**",
+			"/tcasapi/alertSeverityTrend/**",
+
+			"/v3/api-docs/**","/api-docs",
+			"/swagger-resources/**",
+			"/swagger-ui/**",
+			"/webjars/**",
 			"/qrImages/**",
 			"/tcasapi/test",
 			"/resources/**",

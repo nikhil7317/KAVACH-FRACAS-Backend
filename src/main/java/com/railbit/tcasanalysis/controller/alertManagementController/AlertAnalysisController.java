@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @RestController
@@ -17,59 +18,72 @@ public class AlertAnalysisController {
     @GetMapping("/categoryWiseToday")
     public ResponseEntity<?> getAlertsCategoryWiseToday() {
         try {
-            return ResponseEntity.ok(Map.of(
-                    "status", "success",
-                    "data", service.getAlertsCategoryWiseToday()
-            ));
+            Object data = service.getAlertsCategoryWiseToday();
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "success");
+            response.put("data", data != null ? data : new HashMap<>());
+
+            return ResponseEntity.ok(response);
+
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "status", "error",
-                    "message", e.getMessage()
-            ));
+            return buildErrorResponse(e);
         }
     }
 
     @GetMapping("/resolutionStatusToday")
     public ResponseEntity<?> getResolutionStatusToday() {
         try {
-            return ResponseEntity.ok(Map.of(
-                    "status", "success",
-                    "data", service.getResolutionStatusToday()
-            ));
+            Object data = service.getResolutionStatusToday();
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "success");
+            response.put("data", data != null ? data : new HashMap<>());
+
+            return ResponseEntity.ok(response);
+
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "status", "error",
-                    "message", e.getMessage()
-            ));
+            return buildErrorResponse(e);
         }
     }
 
     @GetMapping("/stationHeatmap")
     public ResponseEntity<?> getStationHeatmap() {
         try {
-            return ResponseEntity.ok(Map.of(
-                    "status", "success",
-                    "data", service.getStationHeatmap()
-            ));
+            Object data = service.getStationHeatmap();
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "success");
+            response.put("data", data != null ? data : new HashMap<>());
+
+            return ResponseEntity.ok(response);
+
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "status", "error",
-                    "message", e.getMessage()
-            ));
+            return buildErrorResponse(e);
         }
     }
+
     @GetMapping("/collisionVsSos")
     public ResponseEntity<?> getCollisionVsSos() {
         try {
-            return ResponseEntity.ok(Map.of(
-                    "status", "success",
-                    "data", service.getCollisionVsSos()
-            ));
+            Object data = service.getCollisionVsSos();
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "success");
+            response.put("data", data != null ? data : new HashMap<>());
+
+            return ResponseEntity.ok(response);
+
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "status", "error",
-                    "message", e.getMessage()
-            ));
+            return buildErrorResponse(e);
         }
+    }
+
+    // ✅ Common error handler (clean code)
+    private ResponseEntity<Map<String, Object>> buildErrorResponse(Exception e) {
+        Map<String, Object> error = new HashMap<>();
+        error.put("status", "error");
+        error.put("message", e.getMessage() != null ? e.getMessage() : "Something went wrong");
+        return ResponseEntity.badRequest().body(error);
     }
 }

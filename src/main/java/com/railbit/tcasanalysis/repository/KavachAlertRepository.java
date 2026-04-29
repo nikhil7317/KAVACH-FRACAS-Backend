@@ -63,6 +63,7 @@ public interface KavachAlertRepository extends JpaRepository<KavachAlert, Long> 
 SELECT ka.id,
        ka.event_time,
        ka.loco_id,
+       ka.station_id,
        s.code AS station_code,
        ka.alert_category,
        ka.alert_code,

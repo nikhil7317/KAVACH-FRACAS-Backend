@@ -14,26 +14,32 @@ public class AlertLogService {
 
     public List<Map<String, Object>> getAlertLogs() {
 
-        List<Object[]> results = repo.getAlertLogs();
+        List<Object[]> results = Optional.ofNullable(repo.getAlertLogs())
+                .orElse(new ArrayList<>());
 
-        return results.stream().map(row -> {
+        List<Map<String, Object>> response = new ArrayList<>();
 
-            String ticketStatus = row[5] != null ? row[5].toString().toUpperCase() : null;
+        for (Object[] row : results) {
+
+            String ticketStatus = row[5] != null ? row[5].toString().toUpperCase() : "";
 
             String notificationStatus =
                     ("OPEN".equals(ticketStatus) || "CLOSED".equals(ticketStatus))
                             ? "Sent"
                             : "Pending";
 
-            return Map.of(
-                    "locoNo", row[0],
-                    "stationName", row[1],
-                    "alertMessage", row[2],
-                    "severity", row[3],
-                    "eventTime", row[4],
-                    "notificationStatus", notificationStatus
-            );
+            Map<String, Object> map = new HashMap<>();
 
-        }).toList();
+            map.put("locoNo", row[0] != null ? row[0] : "");
+            map.put("stationName", row[1] != null ? row[1] : "");
+            map.put("alertMessage", row[2] != null ? row[2] : "");
+            map.put("severity", row[3] != null ? row[3] : "");
+            map.put("eventTime", row[4] != null ? row[4] : "");
+            map.put("notificationStatus", notificationStatus);
+
+            response.add(map);
+        }
+
+        return response;
     }
 }

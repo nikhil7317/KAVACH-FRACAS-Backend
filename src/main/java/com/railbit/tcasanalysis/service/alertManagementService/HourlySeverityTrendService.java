@@ -1,7 +1,5 @@
 package com.railbit.tcasanalysis.service.alertManagementService;
 
-
-
 import com.railbit.tcasanalysis.repository.alertManagementRepo.HourlySeverityTrendRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -16,15 +14,16 @@ public class HourlySeverityTrendService {
 
     public Map<String, Object> getHourlyTrend() {
 
-        List<Object[]> results = repo.getHourlyTrendLast1Hour();
+        List<Object[]> results = Optional.ofNullable(repo.getHourlyTrendLast1Hour())
+                .orElse(new ArrayList<>());
 
-        // Prepare structure
         Map<Integer, Map<String, Integer>> hourMap = new TreeMap<>();
 
         for (Object[] row : results) {
-            int hour = ((Number) row[0]).intValue();
-            String severity = (String) row[1];
-            int count = ((Number) row[2]).intValue();
+
+            int hour = row[0] != null ? ((Number) row[0]).intValue() : 0;
+            String severity = row[1] != null ? row[1].toString() : "";
+            int count = row[2] != null ? ((Number) row[2]).intValue() : 0;
 
             hourMap.putIfAbsent(hour, new HashMap<>());
             hourMap.get(hour).put(severity, count);
@@ -36,7 +35,12 @@ public class HourlySeverityTrendService {
         List<Integer> medium = new ArrayList<>();
 
         for (int hr : hourMap.keySet()) {
-            labels.add(String.format("%02d", hr));
+
+            int hour12 = hr % 12 == 0 ? 12 : hr % 12;
+            String ampm = hr < 12 ? "AM" : "PM";
+
+            String label = String.format("%02d:00 %s", hour12, ampm);
+            labels.add(label);
 
             Map<String, Integer> sevMap = hourMap.get(hr);
 
@@ -45,22 +49,28 @@ public class HourlySeverityTrendService {
             medium.add(sevMap.getOrDefault("MEDIUM", 0));
         }
 
-        return Map.of(
-                "labels", labels,
-                "datasets", List.of(
-                        dataset("Critical", "#ff0000", critical),
-                        dataset("Warning", "#ff9800", warning),
-                        dataset("Medium", "#2196f3", medium)
-                )
-        );
+        Map<String, Object> response = new HashMap<>();
+        response.put("labels", labels);
+
+        List<Map<String, Object>> datasets = new ArrayList<>();
+        datasets.add(dataset("Critical", "#ff0000", critical));
+        datasets.add(dataset("Warning", "#ff9800", warning));
+        datasets.add(dataset("Medium", "#2196f3", medium));
+
+        response.put("datasets", datasets);
+
+        return response;
     }
 
+    // ✅ SAFE helper
     private Map<String, Object> dataset(String label, String color, List<Integer> data) {
-        return Map.of(
-                "label", label,
-                "data", data,
-                "borderColor", color,
-                "fill", false
-        );
+
+        Map<String, Object> map = new HashMap<>();
+        map.put("label", label != null ? label : "");
+        map.put("data", data != null ? data : new ArrayList<>());
+        map.put("borderColor", color != null ? color : "");
+        map.put("fill", false);
+
+        return map;
     }
 }

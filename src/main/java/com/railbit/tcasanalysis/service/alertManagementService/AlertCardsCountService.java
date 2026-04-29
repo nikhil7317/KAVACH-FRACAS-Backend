@@ -4,8 +4,7 @@ import com.railbit.tcasanalysis.repository.alertManagementRepo.AlertCardsCountRe
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class AlertCardsCountService {
@@ -15,27 +14,26 @@ public class AlertCardsCountService {
 
     public List<Map<String, Object>> getTodayAlertCards() {
 
-        long total = repo.countAlertsToday();
-        long critical = repo.countCriticalAlertsToday();
+        long total = Optional.ofNullable(repo.countAlertsToday()).orElse(0L);
+        long critical = Optional.ofNullable(repo.countCriticalAlertsToday()).orElse(0L);
+        long open = Optional.ofNullable(repo.countOpenTicketsToday()).orElse(0L);
+        long closed = Optional.ofNullable(repo.countClosedTicketsToday()).orElse(0L);
 
+        List<Map<String, Object>> result = new ArrayList<>();
 
+        result.add(card("Total Incidents", total));
+        result.add(card("Critical Alerts", critical));
+        result.add(card("Open Unique Tickets", open));
+        result.add(card("Closed Unique Tickets", closed));
 
-        long open = repo.countOpenTicketsToday();
-        long closed = repo.countClosedTicketsToday();
-
-
-        return List.of(
-                card("Total Incidents", total),
-                card("Critical Alerts", critical),
-                card("Open Unique Tickets", open),
-                card("Closed Unique Tickets", closed)
-        );
+        return result;
     }
 
+    // ✅ SAFE helper (NO Map.of)
     private Map<String, Object> card(String label, long value) {
-        return Map.of(
-                "label", label,
-                "value", value
-        );
+        Map<String, Object> map = new HashMap<>();
+        map.put("label", label != null ? label : "");
+        map.put("value", value);
+        return map;
     }
 }
