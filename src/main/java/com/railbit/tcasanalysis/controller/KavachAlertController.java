@@ -36,8 +36,8 @@ public class KavachAlertController {
      */
     @GetMapping
     public ResponseEntity<?> getAlerts(
-            @RequestParam("fromDate") @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date fromDate,
-            @RequestParam("toDate")   @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date toDate,
+            @RequestParam(value = "fromDate", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date fromDate,
+            @RequestParam(value = "toDate", required = false)   @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date toDate,
             @RequestParam(value = "locoId",    required = false) Integer locoId,
             @RequestParam(value = "stnId",     required = false) Integer stnId,
             @RequestParam(value = "severity",  required = false) String severity,
@@ -85,8 +85,8 @@ public class KavachAlertController {
                     "status", "success",
                     "count",  alerts.size(),
                     "filters", Map.of(
-                            "fromDate", fromDate,
-                            "toDate",   toDate,
+                            "fromDate", fromDate != null ? fromDate  : "all",
+                            "toDate",   toDate != null ? toDate   : "all",
                             "locoId",   locoId   != null ? locoId   : "all",
                             "stnId", stnId != null ? stnId : "all",
                             "severity", severity != null ? severity : "all",
@@ -101,6 +101,7 @@ public class KavachAlertController {
                     Map.of("status", "error", "message", e.getMessage()));
         }
     }
+
     @GetMapping("/counts")
     public ResponseEntity<?> getAlertCounts(
             @RequestParam(value = "locoId", required = false) Integer locoId,

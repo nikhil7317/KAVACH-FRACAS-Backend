@@ -93,7 +93,8 @@ SELECT ka.id,
 FROM kavach_alert ka
 LEFT JOIN kavach_alert_details kad ON kad.kavach_alert_id = ka.id
 LEFT JOIN station s ON ka.station_id = s.tcas_subsys_id
-WHERE ka.event_time BETWEEN :from AND :to
+WHERE (:from IS NULL OR ka.event_time >= :from)
+  AND (:to IS NULL OR ka.event_time <= :to)
   AND (:locoId IS NULL OR ka.loco_id = :locoId)
   AND (:stnId IS NULL OR ka.station_id = :stnId)
   AND (:severity IS NULL OR ka.severity = :severity)
