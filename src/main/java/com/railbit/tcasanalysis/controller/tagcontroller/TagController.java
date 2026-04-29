@@ -108,12 +108,12 @@ public class TagController {
             @RequestParam(value = "alertCode", required = false) Integer alertCode,
             @RequestParam(value = "severity", required = false) String severity,
 
-            @RequestParam(value = "stnCode", required = false) String stnCode   // ✅ CHANGED
+            @RequestParam(value = "stnId", required = false) Integer stnId // ✅ CHANGED
     ) {
 
         Map<String, Object> report =
                 missingTagReportService.getMissingTagReport(
-                        fromDate, toDate, locoId, alertCode, severity, stnCode);
+                        fromDate, toDate, locoId, alertCode, severity, stnId);
 
         return ResponseEntity.ok(Map.of(
                 "status", "success",
@@ -123,7 +123,7 @@ public class TagController {
                         "locoId", locoId != null ? locoId : "all",
                         "alertCode", alertCode != null ? alertCode : "all",
                         "severity", severity != null ? severity : "all",
-                        "stnCode", stnCode != null ? stnCode : "all"   // ✅ UPDATED
+                        "stnId", stnId != null ? stnId : "all"   // ✅ UPDATED
                 ),
                 "report", report
         ));

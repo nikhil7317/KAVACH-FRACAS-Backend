@@ -30,7 +30,7 @@ public class MissingTagReportService {
     public Map<String, Object> getMissingTagReport(
             Date fromDate, Date toDate,
             Integer locoId, Integer alertCode,
-            String severity, String stnCode) {
+            String severity, Integer stnId) {
 
         String sql =
                 "SELECT a.event_time, a.loco_id, a.station_id, s.code AS station_code, a.alert_code, " +
@@ -50,7 +50,9 @@ public class MissingTagReportService {
         if (locoId != null) sql += "AND a.loco_id = :locoId ";
         if (alertCode != null) sql += "AND a.alert_code = :alertCode ";
         if (severity != null && !severity.isEmpty()) sql += "AND a.severity = :severity ";
-        if (stnCode != null && !stnCode.isEmpty()) sql += "AND s.code = :stnCode ";
+        if (stnId != null) {
+            sql += "AND a.station_id = :stnId ";
+        }
 
         sql += "ORDER BY a.event_time DESC";
 
@@ -61,7 +63,9 @@ public class MissingTagReportService {
         if (locoId != null) query.setParameter("locoId", locoId);
         if (alertCode != null) query.setParameter("alertCode", alertCode);
         if (severity != null && !severity.isEmpty()) query.setParameter("severity", severity);
-        if (stnCode != null && !stnCode.isEmpty()) query.setParameter("stnCode", stnCode);
+        if (stnId != null) {
+            query.setParameter("stnId", stnId);
+        }
 
         List<Object[]> rows = Optional.ofNullable(query.getResultList()).orElse(new ArrayList<>());
 
@@ -147,14 +151,17 @@ public class MissingTagReportService {
 
     public List<Map<String, Object>> getDistinctAlertMessagesWithId(String category) {
 
-        List<Object[]> rows = repository.findDistinctAlertCodeAndMessage(category);
+        List<String> messages = repository.findDistinctMessages(category);
 
         List<Map<String, Object>> result = new ArrayList<>();
 
-        for (Object[] row : rows) {
+        int id = 1; // custom ID since alertCode removed
+        for (String message : messages) {
+
             Map<String, Object> map = new HashMap<>();
-            map.put("id", row[0]);          // alertCode
-            map.put("message", row[1]);     // alertMessage
+            map.put("id", id++);
+            map.put("message", message);
+
             result.add(map);
         }
 

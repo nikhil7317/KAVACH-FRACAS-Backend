@@ -39,7 +39,7 @@ public class KavachAlertController {
             @RequestParam("fromDate") @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date fromDate,
             @RequestParam("toDate")   @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date toDate,
             @RequestParam(value = "locoId",    required = false) Integer locoId,
-            @RequestParam(value = "stnCode", required = false) String stnCode,
+            @RequestParam(value = "stnId",     required = false) Integer stnId,
             @RequestParam(value = "severity",  required = false) String severity,
             @RequestParam(value = "category",  required = false) String category,
             @RequestParam(value = "ticketStatus", required = false) String ticketStatus,
@@ -51,7 +51,7 @@ public class KavachAlertController {
 
 
             List<Object[]> results = alertRepository.findByFiltersWithDetails(
-                    fromDate, toDate, locoId, stnCode, severity, category, userId, ticketStatus, pageable);
+                    fromDate, toDate, locoId, stnId, severity, category, userId, ticketStatus, pageable);
 
             List<Map<String, Object>> alerts = results.stream().map(row -> {
                 Map<String, Object> map = new HashMap<>();
@@ -88,7 +88,7 @@ public class KavachAlertController {
                             "fromDate", fromDate,
                             "toDate",   toDate,
                             "locoId",   locoId   != null ? locoId   : "all",
-                            "stnCode", stnCode != null ? stnCode : "all",
+                            "stnId", stnId != null ? stnId : "all",
                             "severity", severity != null ? severity : "all",
                             "category", category != null ? category : "all",
                             "ticketStatus", ticketStatus != null ? ticketStatus : "all",

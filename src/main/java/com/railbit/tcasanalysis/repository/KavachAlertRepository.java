@@ -17,43 +17,43 @@ public interface KavachAlertRepository extends JpaRepository<KavachAlert, Long> 
 
     // Date range (required)
     @Query("SELECT a FROM KavachAlert a " +
-           "WHERE a.eventTime BETWEEN :from AND :to " +
-           "ORDER BY a.eventTime DESC")
+            "WHERE a.eventTime BETWEEN :from AND :to " +
+            "ORDER BY a.eventTime DESC")
     List<KavachAlert> findByDateRange(
             @Param("from") Date from, @Param("to") Date to);
 
     // Date + locoId
     @Query("SELECT a FROM KavachAlert a " +
-           "WHERE a.eventTime BETWEEN :from AND :to " +
-           "AND a.locoId = :locoId " +
-           "ORDER BY a.eventTime DESC")
+            "WHERE a.eventTime BETWEEN :from AND :to " +
+            "AND a.locoId = :locoId " +
+            "ORDER BY a.eventTime DESC")
     List<KavachAlert> findByDateRangeAndLocoId(
             @Param("from") Date from, @Param("to") Date to,
             @Param("locoId") Integer locoId);
 
     // Date + stationId
     @Query("SELECT a FROM KavachAlert a " +
-           "WHERE a.eventTime BETWEEN :from AND :to " +
-           "AND a.stationId = :stnId " +
-           "ORDER BY a.eventTime DESC")
+            "WHERE a.eventTime BETWEEN :from AND :to " +
+            "AND a.stationId = :stnId " +
+            "ORDER BY a.eventTime DESC")
     List<KavachAlert> findByDateRangeAndStationId(
             @Param("from") Date from, @Param("to") Date to,
             @Param("stnId") Integer stnId);
 
     // Date + severity
     @Query("SELECT a FROM KavachAlert a " +
-           "WHERE a.eventTime BETWEEN :from AND :to " +
-           "AND a.severity = :severity " +
-           "ORDER BY a.eventTime DESC")
+            "WHERE a.eventTime BETWEEN :from AND :to " +
+            "AND a.severity = :severity " +
+            "ORDER BY a.eventTime DESC")
     List<KavachAlert> findByDateRangeAndSeverity(
             @Param("from") Date from, @Param("to") Date to,
             @Param("severity") String severity);
 
     // Date + category
     @Query("SELECT a FROM KavachAlert a " +
-           "WHERE a.eventTime BETWEEN :from AND :to " +
-           "AND a.alertCategory = :category " +
-           "ORDER BY a.eventTime DESC")
+            "WHERE a.eventTime BETWEEN :from AND :to " +
+            "AND a.alertCategory = :category " +
+            "ORDER BY a.eventTime DESC")
     List<KavachAlert> findByDateRangeAndCategory(
             @Param("from") Date from, @Param("to") Date to,
             @Param("category") String category);
@@ -95,7 +95,7 @@ LEFT JOIN kavach_alert_details kad ON kad.kavach_alert_id = ka.id
 LEFT JOIN station s ON ka.station_id = s.tcas_subsys_id
 WHERE ka.event_time BETWEEN :from AND :to
   AND (:locoId IS NULL OR ka.loco_id = :locoId)
-  AND (:stnCode IS NULL OR s.code = :stnCode)
+  AND (:stnId IS NULL OR ka.station_id = :stnId)
   AND (:severity IS NULL OR ka.severity = :severity)
   AND (:category IS NULL OR ka.alert_category = :category)
 
@@ -124,7 +124,7 @@ ORDER BY ka.event_time DESC
             @Param("from") Date from,
             @Param("to") Date to,
             @Param("locoId") Integer locoId,
-            @Param("stnCode") String stnCode,
+            @Param("stnId") Integer stnId,
             @Param("severity") String severity,
             @Param("category") String category,
             @Param("userId") Integer userId,
@@ -172,8 +172,6 @@ ORDER BY ka.event_time DESC
             @Param("from") Date from,
             @Param("to") Date to);
 
-    @Query("SELECT DISTINCT k.alertCode, k.alertMessage FROM KavachAlert k WHERE k.alertCategory = :category")
-    List<Object[]> findDistinctAlertCodeAndMessage(@Param("category") String category);
 
     @Query("SELECT DISTINCT a.alertCategory FROM KavachAlert a ORDER BY a.alertCategory")
     List<String> findDistinctAlertCategories();
@@ -205,4 +203,12 @@ ORDER BY ka.event_time DESC
     @Transactional
     @Query("UPDATE KavachAlert k SET k.isNotified = true WHERE k.id IN :ids")
     int markAllAsNotified(@Param("ids") List<Long> ids);
+
+    @Query("""
+    SELECT DISTINCT k.alertMessage
+    FROM KavachAlert k
+    WHERE k.alertCategory = :category
+      AND k.alertMessage <> 'Tag position interchanged'
+""")
+    List<String> findDistinctMessages(@Param("category") String category);
 }
