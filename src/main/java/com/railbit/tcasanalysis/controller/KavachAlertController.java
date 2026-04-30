@@ -77,7 +77,8 @@ public class KavachAlertController {
                 map.put("ticketNo",      row[19]);
                 map.put("ticketStatus",  row[20]);
                 map.put("isPopupDialogAck", row[21]);
-                map.put("adminRemarks",  row[22]);
+                map.put("isAssignedNotified", row[22]);
+                map.put("adminRemarks",       row[23]);
                 return map;
             }).collect(Collectors.toList());
 
@@ -262,6 +263,37 @@ public class KavachAlertController {
                     "status",  "success",
                     "alertId", alertId,
                     "acked",   true));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(
+                    Map.of("status", "error", "message", e.getMessage()));
+        }
+    }
+
+    // Single alert — mark assigned-notified
+    @PatchMapping("/{id}/assigned-notify")
+    public ResponseEntity<?> markAssignedNotified(@PathVariable Long id) {
+        try {
+            int updated = alertRepository.markAssignedNotified(id);
+            if (updated == 0) {
+                return ResponseEntity.notFound().build();
+            }
+            return ResponseEntity.ok(Map.of(
+                    "status", "success",
+                    "message", "Alert marked as assigned-notified"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(
+                    Map.of("status", "error", "message", e.getMessage()));
+        }
+    }
+
+    // Bulk — mark multiple alerts assigned-notified
+    @PatchMapping("/assigned-notify-batch")
+    public ResponseEntity<?> markBatchAssignedNotified(@RequestBody List<Long> alertIds) {
+        try {
+            int updated = alertRepository.markAllAssignedNotified(alertIds);
+            return ResponseEntity.ok(Map.of(
+                    "status", "success",
+                    "updated", updated));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(
                     Map.of("status", "error", "message", e.getMessage()));

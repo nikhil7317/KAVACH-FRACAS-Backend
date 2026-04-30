@@ -82,6 +82,7 @@ SELECT ka.id,
        kad.ticket_no,
        kad.ticket_status,
        ka.is_popup_dialog_ack,
+       kad.is_assigned_notified,      -- row[22]  ← NEW
        (
          SELECT it.ticket_remarks
          FROM incident_track it
@@ -89,7 +90,7 @@ SELECT ka.id,
          AND it.ticket_status = 'OPEN'
          ORDER BY it.incident_created_at DESC
          LIMIT 1
-       ) AS admin_remarks
+       ) AS admin_remarks             -- row[23]  ← was row[22]
 FROM kavach_alert ka
 LEFT JOIN kavach_alert_details kad ON kad.kavach_alert_id = ka.id
 LEFT JOIN station s ON ka.station_id = s.tcas_subsys_id
@@ -99,13 +100,10 @@ WHERE (:from IS NULL OR ka.event_time >= :from)
   AND (:stnId IS NULL OR ka.station_id = :stnId)
   AND (:severity IS NULL OR ka.severity = :severity)
   AND (:category IS NULL OR ka.alert_category = :category)
-
-  -- ✅ NEW FILTER
   AND (
         :ticketStatus IS NULL
         OR UPPER(kad.ticket_status) = UPPER(:ticketStatus)
       )
-
   AND NOT EXISTS (
       SELECT 1 FROM alert_message_config amc
       WHERE amc.enabled = false
@@ -212,4 +210,17 @@ ORDER BY ka.event_time DESC
       AND k.alertMessage <> 'Tag position interchanged'
 """)
     List<String> findDistinctMessages(@Param("category") String category);
+
+
+    // Single
+    @Modifying
+    @Transactional
+    @Query(value = "UPDATE kavach_alert_details SET is_assigned_notified = true WHERE kavach_alert_id = :alertId", nativeQuery = true)
+    int markAssignedNotified(@Param("alertId") Long alertId);
+
+    // Bulk
+    @Modifying
+    @Transactional
+    @Query(value = "UPDATE kavach_alert_details SET is_assigned_notified = true WHERE kavach_alert_id IN :alertIds", nativeQuery = true)
+    int markAllAssignedNotified(@Param("alertIds") List<Long> alertIds);
 }

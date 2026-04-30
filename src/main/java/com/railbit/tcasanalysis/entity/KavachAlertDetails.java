@@ -41,4 +41,7 @@ public class KavachAlertDetails {
 
     @Column(name = "auto_created", nullable = false)
     private boolean autoCreated = false;
+
+    @Column(name = "is_assigned_notified", nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    private Boolean isAssignedNotified = false;
 }
