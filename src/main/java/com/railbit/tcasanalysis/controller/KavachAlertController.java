@@ -157,6 +157,7 @@ public class KavachAlertController {
                 map.put("alertMessage", row[0]);
                 map.put("stationName", row[1]);
                 map.put("eventTime", row[2]);
+                map.put("stationId", row[3]);   // ✅ NEW FIELD
                 return map;
             }).collect(Collectors.toList());
 

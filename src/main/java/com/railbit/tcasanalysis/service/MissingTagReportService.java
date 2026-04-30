@@ -29,7 +29,7 @@ public class MissingTagReportService {
      */
     public Map<String, Object> getMissingTagReport(
             Date fromDate, Date toDate,
-            Integer locoId, Integer alertCode,
+            Integer locoId, String alertCategory,
             String severity, Integer stnId) {
 
         String sql =
@@ -40,6 +40,8 @@ public class MissingTagReportService {
                         "LEFT JOIN station s ON a.station_id = s.tcas_subsys_id " +
                         "WHERE a.alert_category IN ('TAG_LINK', 'RFID_ISSUE') " +
                         "AND a.event_time BETWEEN :fromDate AND :toDate " +
+
+                        // ✅ alert config filter
                         "AND NOT EXISTS ( " +
                         "    SELECT 1 FROM alert_message_config amc " +
                         "    WHERE amc.enabled = false " +
@@ -47,9 +49,20 @@ public class MissingTagReportService {
                         "      AND amc.alert_message = a.alert_message " +
                         ") ";
 
-        if (locoId != null) sql += "AND a.loco_id = :locoId ";
-        if (alertCode != null) sql += "AND a.alert_code = :alertCode ";
-        if (severity != null && !severity.isEmpty()) sql += "AND a.severity = :severity ";
+        // ✅ optional filters
+        if (locoId != null) {
+            sql += "AND a.loco_id = :locoId ";
+        }
+
+        // ✅ CASE-INSENSITIVE CATEGORY FILTER
+        if (alertCategory != null && !alertCategory.isEmpty()) {
+            sql += "AND a.alert_message = :alertCategory ";
+        }
+
+        if (severity != null && !severity.isEmpty()) {
+            sql += "AND UPPER(a.severity) = UPPER(:severity) ";
+        }
+
         if (stnId != null) {
             sql += "AND a.station_id = :stnId ";
         }
@@ -57,19 +70,30 @@ public class MissingTagReportService {
         sql += "ORDER BY a.event_time DESC";
 
         Query query = entityManager.createNativeQuery(sql);
+
         query.setParameter("fromDate", fromDate);
         query.setParameter("toDate", toDate);
 
-        if (locoId != null) query.setParameter("locoId", locoId);
-        if (alertCode != null) query.setParameter("alertCode", alertCode);
-        if (severity != null && !severity.isEmpty()) query.setParameter("severity", severity);
+        if (locoId != null) {
+            query.setParameter("locoId", locoId);
+        }
+
+        if (alertCategory != null && !alertCategory.trim().isEmpty()) {
+            query.setParameter("alertCategory", alertCategory.trim());
+        }
+
+        if (severity != null && !severity.isEmpty()) {
+            query.setParameter("severity", severity);
+        }
+
         if (stnId != null) {
             query.setParameter("stnId", stnId);
         }
 
-        List<Object[]> rows = Optional.ofNullable(query.getResultList()).orElse(new ArrayList<>());
+        List<Object[]> rows = Optional.ofNullable(query.getResultList())
+                .orElse(new ArrayList<>());
 
-        // ===== BUILD EVENTS =====
+        // ================= EVENTS =================
         List<Map<String, Object>> events = new ArrayList<>();
 
         int dupMissing = 0, mainMissing = 0, bothMissing = 0, posInterchanged = 0;
@@ -85,36 +109,34 @@ public class MissingTagReportService {
             event.put("eventTime", row[0]);
             event.put("locoId", row[1]);
 
-            // ✅ NEW FIELD
-            event.put("stationId", row[2] != null ? row[2] : null);
-
-            // ✅ SAFE stationCode
-            event.put("stationCode", row[3] != null ? row[3] : "UNKNOWN");
+            // ✅ station fields
+            event.put("stationId", row[2]);
+            event.put("stationCode", row[3] != null ? row[3] : "");
 
             event.put("alertCode", row[4] != null ? row[4] : 0);
             event.put("alertMessage", row[5] != null ? row[5] : "");
-            event.put("lastRfidTag", row[6] != null ? row[6] : null);
-            event.put("trainSpeed", row[7] != null ? row[7] : null);
+            event.put("lastRfidTag", row[6]);
+            event.put("trainSpeed", row[7]);
             event.put("locoMode", row[8] != null ? row[8] : "");
-            event.put("absLocoLoc", row[9] != null ? row[9] : null);
+            event.put("absLocoLoc", row[9]);
             event.put("alertCategory", row[10] != null ? row[10] : "");
             event.put("sourcePktType", row[11] != null ? row[11] : "");
             event.put("severity", row[12] != null ? row[12] : "");
 
             events.add(event);
 
-            // ===== SAFE PROCESSING =====
+            // ================= SUMMARY LOGIC =================
             int code = row[4] != null ? ((Number) row[4]).intValue() : 0;
             String category = row[10] != null ? row[10].toString() : "";
 
-            if ("TAG_LINK".equals(category)) {
+            if ("TAG_LINK".equalsIgnoreCase(category)) {
                 switch (code) {
                     case 1: dupMissing++; break;
                     case 2: mainMissing++; break;
                     case 3: bothMissing++; break;
                     case 4: posInterchanged++; break;
                 }
-            } else if ("RFID_ISSUE".equals(category)) {
+            } else if ("RFID_ISSUE".equalsIgnoreCase(category)) {
                 switch (code) {
                     case 38: missingRfid++; break;
                     case 39: invalidRfid++; break;
@@ -122,11 +144,16 @@ public class MissingTagReportService {
                 }
             }
 
-            if (row[6] != null) uniqueTags.add(((Number) row[6]).intValue());
-            if (row[1] != null) uniqueLocos.add(((Number) row[1]).intValue());
+            if (row[6] != null) {
+                uniqueTags.add(((Number) row[6]).intValue());
+            }
+
+            if (row[1] != null) {
+                uniqueLocos.add(((Number) row[1]).intValue());
+            }
         }
 
-        // ===== SUMMARY =====
+        // ================= SUMMARY =================
         Map<String, Integer> summary = new LinkedHashMap<>();
         summary.put("Duplicate Tag Missing", dupMissing);
         summary.put("Main Tag Missing", mainMissing);
@@ -137,7 +164,7 @@ public class MissingTagReportService {
         summary.put("Conflict Route RFID (Station Health)", conflictRouteRfid);
         summary.put("Total Events", rows.size());
 
-        // ===== FINAL RESPONSE =====
+        // ================= FINAL RESPONSE =================
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("summary", summary);
         result.put("uniqueRfidTags", uniqueTags);
@@ -152,6 +179,7 @@ public class MissingTagReportService {
     public List<Map<String, Object>> getDistinctAlertMessagesWithId(String category) {
 
         List<String> messages = repository.findDistinctMessages(category);
+        Collections.reverse(messages);
 
         List<Map<String, Object>> result = new ArrayList<>();
 

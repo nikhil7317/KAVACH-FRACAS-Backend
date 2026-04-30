@@ -37,6 +37,8 @@ public class AlertLogService {
             map.put("eventTime", row[4] != null ? row[4] : "");
             map.put("notificationStatus", notificationStatus);
 
+            map.put("stationId", row[6] != null ? row[6] : "");   // ✅ NEW FIELD
+
             response.add(map);
         }
 

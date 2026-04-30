@@ -38,7 +38,8 @@ public interface EmergencyMonitoringRepository extends JpaRepository<KavachAlert
             ka.alert_message,
             ka.alert_category,
             ka.severity,
-            kad.ticket_status
+            kad.ticket_status,
+             ka.station_id
         FROM kavach_alert ka
         LEFT JOIN station s ON ka.station_id = s.tcas_subsys_id
         LEFT JOIN kavach_alert_details kad ON ka.id = kad.kavach_alert_id

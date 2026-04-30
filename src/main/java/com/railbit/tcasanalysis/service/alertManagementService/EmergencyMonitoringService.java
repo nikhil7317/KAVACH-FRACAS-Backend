@@ -57,6 +57,7 @@ public class EmergencyMonitoringService {
             rowMap.put("category", r[4] != null ? r[4] : "");
             rowMap.put("severity", r[5] != null ? r[5] : "");
             rowMap.put("notificationStatus", notificationStatus);
+            rowMap.put("stationId", r[7] != null ? r[7] : "");
 
             table.add(rowMap);
         }

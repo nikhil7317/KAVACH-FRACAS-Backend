@@ -178,11 +178,11 @@ ORDER BY ka.event_time DESC
     List<String> findDistinctAlertCategories();
 
 
-    @Query(value = "SELECT a.alert_message, s.name AS station_name, a.event_time " +
+    @Query(value = "SELECT a.alert_message, s.name AS station_name, a.event_time, a.station_id " +  // ✅ added station_id
             "FROM kavach_alert a " +
             "LEFT JOIN station s ON a.station_id = s.tcas_subsys_id " +
-            "WHERE a.event_time >= CURDATE() " +
-            "AND a.event_time < CURDATE() + INTERVAL 1 DAY " +
+            "WHERE a.event_time >= NOW() - INTERVAL 10 MINUTE " +   // ✅ last 10 min
+            "AND DATE(a.event_time) = CURRENT_DATE " +              // ✅ current date only
             "AND UPPER(a.severity) = 'CRITICAL' " +
             "AND NOT EXISTS ( " +
             "    SELECT 1 FROM alert_message_config amc " +
