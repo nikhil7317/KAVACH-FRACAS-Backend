@@ -120,7 +120,13 @@ public class KavachAlertDetailsService {
                 .findByKavachAlertDetailsIdOrderByIncidentCreatedAtDesc(details.getId());
 
         response.setId(details.getId());
-        response.setKavachAlert(details.getKavachAlert());
+
+        // FIX: Populate transient fields on KavachAlert before setting it
+        KavachAlert kavachAlert = details.getKavachAlert();
+        kavachAlert.setTicketNo(details.getTicketNo());
+        kavachAlert.setTicketStatus(details.getTicketStatus());
+        response.setKavachAlert(kavachAlert);
+
         response.setCreatedUser(details.getCreatedUser());
         response.setAssignedTo(details.getAssignedTo());
         response.setTicketNo(details.getTicketNo());
