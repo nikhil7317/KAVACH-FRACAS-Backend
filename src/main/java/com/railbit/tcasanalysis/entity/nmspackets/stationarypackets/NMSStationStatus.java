@@ -50,7 +50,7 @@ public class NMSStationStatus {
     }
 
 
-    // Default constructor
+ 
     public NMSStationStatus() {
     }
 }
