@@ -2,6 +2,7 @@ package com.railbit.tcasanalysis.repository;
 
 import com.railbit.tcasanalysis.entity.KavachAlert;
 import jakarta.transaction.Transactional;
+import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -59,7 +60,8 @@ public interface KavachAlertRepository extends JpaRepository<KavachAlert, Long> 
             @Param("category") String category);
 
     // All filters
-    @Query(value = """
+    @Query(
+            value = """
 SELECT ka.id,
        ka.event_time,
        ka.loco_id,
@@ -82,7 +84,7 @@ SELECT ka.id,
        kad.ticket_no,
        kad.ticket_status,
        ka.is_popup_dialog_ack,
-       kad.is_assigned_notified,      -- row[22]  ← NEW
+       kad.is_assigned_notified,
        (
          SELECT it.ticket_remarks
          FROM incident_track it
@@ -90,7 +92,7 @@ SELECT ka.id,
          AND it.ticket_status = 'OPEN'
          ORDER BY it.incident_created_at DESC
          LIMIT 1
-       ) AS admin_remarks             -- row[23]  ← was row[22]
+       ) AS admin_remarks
 FROM kavach_alert ka
 LEFT JOIN kavach_alert_details kad ON kad.kavach_alert_id = ka.id
 LEFT JOIN station s ON ka.station_id = s.tcas_subsys_id
@@ -118,8 +120,41 @@ WHERE (:from IS NULL OR ka.event_time >= :from)
              )
       )
 ORDER BY ka.event_time DESC
-""", nativeQuery = true)
-    List<Object[]> findByFiltersWithDetails(
+""",
+
+            // ✅ REQUIRED FOR PAGINATION
+            countQuery = """
+SELECT COUNT(*)
+FROM kavach_alert ka
+LEFT JOIN kavach_alert_details kad ON kad.kavach_alert_id = ka.id
+LEFT JOIN station s ON ka.station_id = s.tcas_subsys_id
+WHERE (:from IS NULL OR ka.event_time >= :from)
+  AND (:to IS NULL OR ka.event_time <= :to)
+  AND (:locoId IS NULL OR ka.loco_id = :locoId)
+  AND (:stnId IS NULL OR ka.station_id = :stnId)
+  AND (:severity IS NULL OR ka.severity = :severity)
+  AND (:category IS NULL OR ka.alert_category = :category)
+  AND (
+        :ticketStatus IS NULL
+        OR UPPER(kad.ticket_status) = UPPER(:ticketStatus)
+      )
+  AND NOT EXISTS (
+      SELECT 1 FROM alert_message_config amc
+      WHERE amc.enabled = false
+        AND amc.alert_category = ka.alert_category
+        AND amc.alert_message  = ka.alert_message
+  )
+  AND (
+        :userId IS NULL
+         OR (
+               kad.assigned_to_id = :userId
+               AND kad.ticket_status IN ('OPEN', 'RE-ASSIGN', 'REASSIGN')
+             )
+      )
+""",
+            nativeQuery = true
+    )
+    Page<Object[]> findByFiltersWithDetails(
             @Param("from") Date from,
             @Param("to") Date to,
             @Param("locoId") Integer locoId,
@@ -128,7 +163,8 @@ ORDER BY ka.event_time DESC
             @Param("category") String category,
             @Param("userId") Integer userId,
             @Param("ticketStatus") String ticketStatus,
-            Pageable pageable);
+            Pageable pageable
+    );
 
     @Query(value = """
     SELECT ka.id,

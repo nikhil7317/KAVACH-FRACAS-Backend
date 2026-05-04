@@ -4,6 +4,7 @@ import com.railbit.tcasanalysis.entity.KavachAlert;
 import com.railbit.tcasanalysis.repository.KavachAlertRepository;
 import com.railbit.tcasanalysis.service.AlertCountService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -36,67 +37,86 @@ public class KavachAlertController {
      */
     @GetMapping
     public ResponseEntity<?> getAlerts(
-            @RequestParam(value = "fromDate", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date fromDate,
-            @RequestParam(value = "toDate", required = false)   @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date toDate,
-            @RequestParam(value = "locoId",    required = false) Integer locoId,
-            @RequestParam(value = "stnId",     required = false) Integer stnId,
-            @RequestParam(value = "severity",  required = false) String severity,
-            @RequestParam(value = "category",  required = false) String category,
+            @RequestParam(value = "fromDate", required = false)
+            @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date fromDate,
+
+            @RequestParam(value = "toDate", required = false)
+            @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date toDate,
+
+            @RequestParam(value = "locoId", required = false) Integer locoId,
+            @RequestParam(value = "stnId", required = false) Integer stnId,
+            @RequestParam(value = "severity", required = false) String severity,
+            @RequestParam(value = "category", required = false) String category,
             @RequestParam(value = "ticketStatus", required = false) String ticketStatus,
-            @RequestParam(value = "userId", required = false) Integer userId) {  // ← NEW PARAMETER
+            @RequestParam(value = "userId", required = false) Integer userId,
+
+            // ✅ PAGINATION PARAMS
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
 
         try {
-            Pageable pageable = PageRequest.of(0, 100);
+            Pageable pageable = PageRequest.of(page, size);
 
+            Page<Object[]> pageResult = alertRepository.findByFiltersWithDetails(
+                    fromDate, toDate, locoId, stnId, severity, category,
+                    userId, ticketStatus, pageable
+            );
 
-
-            List<Object[]> results = alertRepository.findByFiltersWithDetails(
-                    fromDate, toDate, locoId, stnId, severity, category, userId, ticketStatus, pageable);
-
-            List<Map<String, Object>> alerts = results.stream().map(row -> {
+            List<Map<String, Object>> alerts = pageResult.getContent().stream().map(row -> {
                 Map<String, Object> map = new HashMap<>();
-                map.put("id",            row[0]);
-                map.put("eventTime",     row[1]);
-                map.put("locoId",        row[2]);
-                map.put("stationId",     row[3]);   // ✅ NEW
-                map.put("stationCode",   row[4]);   // shifted
+
+                map.put("id", row[0]);
+                map.put("eventTime", row[1]);
+                map.put("locoId", row[2]);
+                map.put("stationId", row[3]);
+                map.put("stationCode", row[4]);
                 map.put("alertCategory", row[5]);
-                map.put("alertCode",     row[6]);
-                map.put("alertMessage",  row[7]);
-                map.put("severity",      row[8]);
+                map.put("alertCode", row[6]);
+                map.put("alertMessage", row[7]);
+                map.put("severity", row[8]);
                 map.put("sourcePktType", row[9]);
-                map.put("locoPacketId",  row[10]);
-                map.put("trainSpeed",    row[11]);
-                map.put("locoMode",      row[12]);
-                map.put("absLocoLoc",    row[13]);
-                map.put("latitude",      row[14]);
-                map.put("longitude",     row[15]);
-                map.put("createdAt",     row[16]);
-                map.put("lastRfidTag",   row[17]);
-                map.put("isNotified",    row[18]);
-                map.put("ticketNo",      row[19]);
-                map.put("ticketStatus",  row[20]);
+                map.put("locoPacketId", row[10]);
+                map.put("trainSpeed", row[11]);
+                map.put("locoMode", row[12]);
+                map.put("absLocoLoc", row[13]);
+                map.put("latitude", row[14]);
+                map.put("longitude", row[15]);
+                map.put("createdAt", row[16]);
+                map.put("lastRfidTag", row[17]);
+                map.put("isNotified", row[18]);
+                map.put("ticketNo", row[19]);
+                map.put("ticketStatus", row[20]);
                 map.put("isPopupDialogAck", row[21]);
                 map.put("isAssignedNotified", row[22]);
-                map.put("adminRemarks",       row[23]);
+                map.put("adminRemarks", row[23]);
+
                 return map;
-            }).collect(Collectors.toList());
+            }).toList();
 
             return ResponseEntity.ok(Map.of(
                     "status", "success",
-                    "count",  alerts.size(),
+
+                    // ✅ pagination info
+                    "page", page,
+                    "size", size,
+                    "totalElements", pageResult.getTotalElements(),
+                    "totalPages", pageResult.getTotalPages(),
+
                     "filters", Map.of(
-                            "fromDate", fromDate != null ? fromDate  : "all",
-                            "toDate",   toDate != null ? toDate   : "all",
-                            "locoId",   locoId   != null ? locoId   : "all",
+                            "fromDate", fromDate != null ? fromDate : "all",
+                            "toDate", toDate != null ? toDate : "all",
+                            "locoId", locoId != null ? locoId : "all",
                             "stnId", stnId != null ? stnId : "all",
                             "severity", severity != null ? severity : "all",
                             "category", category != null ? category : "all",
                             "ticketStatus", ticketStatus != null ? ticketStatus : "all",
                             "userId", userId != null ? userId : "none"
                     ),
+
                     "data", alerts
             ));
+
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(
                     Map.of("status", "error", "message", e.getMessage()));
