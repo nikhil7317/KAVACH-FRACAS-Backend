@@ -57,9 +57,9 @@ public class KavachAlertDashboardService {
                 card("Critical Alerts",                       criticalAlerts),  // NEW
                 card("Incidents Without Attached Ticket",     withoutTicket),
                 card("Incidents With Attached Ticket",        withTicket),
-                card("Total Unique Tickets Generated",        uniqueTickets),
-                card("Open Unique Tickets",                   openTickets),
-                card("Closed Unique Tickets",                 closedTickets)
+                card("Tickets Generated",        uniqueTickets),
+                card("Open Tickets",                   openTickets),
+                card("Closed Tickets",                 closedTickets)
         );
     }
 
