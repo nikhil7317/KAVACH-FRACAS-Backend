@@ -46,6 +46,18 @@ public class KavachAlert {
     private Integer locoId;
 
     // Station ID (KAVACH_ID from outer, or APPROACHING_STN_ID from Access Request)
+//    @Column(name = "station_id")
+//    private Integer stationId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(
+            name = "station_id",              // column in kavach_alert table
+            referencedColumnName = "tcas_subsys_id", // column in station table
+            insertable = false,
+            updatable = false
+    )
+    private Station station;
+
     @Column(name = "station_id")
     private Integer stationId;
 

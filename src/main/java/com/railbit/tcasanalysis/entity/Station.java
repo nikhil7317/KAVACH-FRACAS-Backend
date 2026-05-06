@@ -33,7 +33,10 @@ public class Station  {
     @ManyToOne
     private Tcas tcas;
 
-    @Column(name = "tcas_subsys_id")
+//    @Column(name = "tcas_subsys_id")
+//    private Integer tcassubsysid;
+
+    @Column(name = "tcas_subsys_id", unique = true)
     private Integer tcassubsysid;
 
     private String nmsVersion;

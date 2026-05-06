@@ -36,8 +36,13 @@ public class KavachAlertDashboardController {
     @GetMapping("/dashboard/getDashboardCountCards")
     public ResponseEntity<Map<String, Object>> getDashboardCountCards(
             @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") Date fromDate,
-            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") Date toDate) {
-        return ResponseEntity.ok(buildResponse(dashboardService.getDashboardCountCards(fromDate, toDate)));
+            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") Date toDate,
+            @RequestParam(required = false) Integer divisionId) {
+        if (divisionId == null) {
+            divisionId = 1;
+        }
+
+        return ResponseEntity.ok(buildResponse(dashboardService.getDashboardCountCards(fromDate, toDate, divisionId)));
     }
 
     /**
@@ -47,8 +52,12 @@ public class KavachAlertDashboardController {
     @GetMapping("/dashboard/getAlertsLocoWise")
     public ResponseEntity<Map<String, Object>> getAlertsLocoWise(
             @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") Date fromDate,
-            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") Date toDate) {
-        return ResponseEntity.ok(buildResponse(dashboardService.getAlertsLocoWise(fromDate, toDate)));
+            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") Date toDate,
+            @RequestParam Integer divisionId) {
+        if (divisionId == null) {
+            divisionId = 1;
+        }
+        return ResponseEntity.ok(buildResponse(dashboardService.getAlertsLocoWise(fromDate, toDate,divisionId)));
     }
 
     /**
@@ -58,8 +67,13 @@ public class KavachAlertDashboardController {
     @GetMapping("/dashboard/getAlertsCategoryWise")
     public ResponseEntity<Map<String, Object>> getAlertsCategoryWise(
             @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") Date fromDate,
-            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") Date toDate) {
-        return ResponseEntity.ok(buildResponse(dashboardService.getAlertsCategoryWise(fromDate, toDate)));
+            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") Date toDate,
+            @RequestParam(required = false) Integer divisionId) {
+        if (divisionId == null) {
+            divisionId = 1;
+        }
+
+        return ResponseEntity.ok(buildResponse(dashboardService.getAlertsCategoryWise(fromDate, toDate, divisionId)));
     }
 
     /**
@@ -69,8 +83,12 @@ public class KavachAlertDashboardController {
     @GetMapping("/dashboard/getAlertsStationWise")
     public ResponseEntity<Map<String, Object>> getAlertsStationWise(
             @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") Date fromDate,
-            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") Date toDate) {
-        return ResponseEntity.ok(buildResponse(dashboardService.getAlertsStationWise(fromDate, toDate)));
+            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") Date toDate,
+            @RequestParam Integer divisionId) {
+        if (divisionId == null) {
+            divisionId = 1;
+        }
+        return ResponseEntity.ok(buildResponse(dashboardService.getAlertsStationWise(fromDate, toDate,divisionId)));
     }
 
     /**
@@ -78,8 +96,19 @@ public class KavachAlertDashboardController {
      * Returns monthly bar graph data grouped by alert_category for the last 12 months.
      */
     @GetMapping("/analysis/getCategoryWiseYearlyGraphData")
-    public ResponseEntity<Map<String, Object>> getCategoryWiseYearlyGraphData() {
-        return ResponseEntity.ok(buildResponse(dashboardService.getCategoryWiseYearlyGraphData()));
+    public ResponseEntity<Map<String, Object>> getCategoryWiseYearlyGraphData(
+            @RequestParam(required = false) Integer divisionId) {
+
+        // Default divisionId = 1
+        if (divisionId == null) {
+            divisionId = 1;
+        }
+
+        return ResponseEntity.ok(
+                buildResponse(
+                        dashboardService.getCategoryWiseYearlyGraphData(divisionId)
+                )
+        );
     }
 
     // ── Reusable response builder ──────────────────────────────────────────────
