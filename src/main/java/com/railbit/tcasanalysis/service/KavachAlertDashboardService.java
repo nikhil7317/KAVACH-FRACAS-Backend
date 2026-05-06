@@ -17,6 +17,9 @@ public class KavachAlertDashboardService {
 
     private final KavachAlertDashboardRepository repo;
 
+    // ── Severity keys always present in output ─────────────────────────────────
+    private static final List<String> SEVERITY_KEYS = List.of("CRITICAL", "WARNING", "MEDIUM", "INFO");
+
     private static final List<String> PALETTE = List.of(
             "#ff6384", "#36a2eb", "#ffce56", "#4bc0c0",
             "#9966ff", "#ff9f40", "#73937E", "#C4DACF",
@@ -45,7 +48,7 @@ public class KavachAlertDashboardService {
         long total = repo.countAlertsInRange(fromDate, adjustedTo);
         long criticalAlerts = repo.countCriticalAlertsInRange(fromDate, adjustedTo);
 
-       
+
         long withTicket    = repo.countAlertsWithTicketInRange(fromDate, adjustedTo);
         long withoutTicket = total - withTicket;
         long openTickets   = repo.countOpenTicketsInRange(fromDate, adjustedTo);
@@ -66,14 +69,20 @@ public class KavachAlertDashboardService {
     // ── 3. Loco-wise counts ────────────────────────────────────────────────────
 
     public List<Map<String, Object>> getAlertsLocoWise(Date fromDate, Date toDate) {
-        List<Object[]> rows = repo.countByLocoId(fromDate, endOfDay(toDate));
+        Date to = endOfDay(toDate);
+        List<Object[]> rows         = repo.countByLocoId(fromDate, to);
+        Map<String, Map<String, Long>> severityPivot =
+                buildSeverityPivot(repo.countByLocoIdAndSeverity(fromDate, to));
+
         List<Map<String, Object>> result = new ArrayList<>();
         int colourIdx = 0;
         for (Object[] row : rows) {
+            String key = String.valueOf(row[0]);
             Map<String, Object> item = new LinkedHashMap<>();
-            item.put("name",      String.valueOf(row[0]));          // locoId as string
+            item.put("name",      key);
             item.put("count",     ((Number) row[1]).longValue());
             item.put("colorCode", PALETTE.get(colourIdx % PALETTE.size()));
+            item.put("severity",  severityPivot.getOrDefault(key, defaultSeverityMap()));
             result.add(item);
             colourIdx++;
         }
@@ -83,14 +92,20 @@ public class KavachAlertDashboardService {
     // ── 4. Category-wise counts ────────────────────────────────────────────────
 
     public List<Map<String, Object>> getAlertsCategoryWise(Date fromDate, Date toDate) {
-        List<Object[]> rows = repo.countByAlertCategory(fromDate, endOfDay(toDate));
+        Date to = endOfDay(toDate);
+        List<Object[]> rows         = repo.countByAlertCategory(fromDate, to);
+        Map<String, Map<String, Long>> severityPivot =
+                buildSeverityPivot(repo.countByAlertCategoryAndSeverity(fromDate, to));
+
         List<Map<String, Object>> result = new ArrayList<>();
         int colourIdx = 0;
         for (Object[] row : rows) {
+            String key = (String) row[0];
             Map<String, Object> item = new LinkedHashMap<>();
-            item.put("name",      (String) row[0]);
+            item.put("name",      key);
             item.put("count",     ((Number) row[1]).longValue());
             item.put("colorCode", PALETTE.get(colourIdx % PALETTE.size()));
+            item.put("severity",  severityPivot.getOrDefault(key, defaultSeverityMap()));
             result.add(item);
             colourIdx++;
         }
@@ -100,14 +115,20 @@ public class KavachAlertDashboardService {
     // ── 5. Station-wise counts ─────────────────────────────────────────────────
 
     public List<Map<String, Object>> getAlertsStationWise(Date fromDate, Date toDate) {
-        List<Object[]> rows = repo.countByStationId(fromDate, endOfDay(toDate));
+        Date to = endOfDay(toDate);
+        List<Object[]> rows         = repo.countByStationId(fromDate, to);
+        Map<String, Map<String, Long>> severityPivot =
+                buildSeverityPivot(repo.countByStationIdAndSeverity(fromDate, to));
+
         List<Map<String, Object>> result = new ArrayList<>();
         int colourIdx = 0;
         for (Object[] row : rows) {
+            String key = String.valueOf(row[0]);
             Map<String, Object> item = new LinkedHashMap<>();
-            item.put("name",      String.valueOf(row[0]));          // stationId as string
+            item.put("name",      key);
             item.put("count",     ((Number) row[1]).longValue());
             item.put("colorCode", PALETTE.get(colourIdx % PALETTE.size()));
+            item.put("severity",  severityPivot.getOrDefault(key, defaultSeverityMap()));
             result.add(item);
             colourIdx++;
         }
@@ -117,33 +138,44 @@ public class KavachAlertDashboardService {
     // ── 6. Category-wise yearly (12-month) graph data ─────────────────────────
 
     public List<Map<String, Object>> getCategoryWiseYearlyGraphData() {
-        // Go back 12 months from the start of the current month
-        LocalDate firstDayOf12MonthsAgo = LocalDate.now()
-                .minusMonths(11)
-                .withDayOfMonth(1);
+        LocalDate firstDayOf12MonthsAgo = LocalDate.now().minusMonths(11).withDayOfMonth(1);
         Date fromDate = java.sql.Date.valueOf(firstDayOf12MonthsAgo);
 
-        List<Object[]> rows = repo.countByCategoryMonthly(fromDate);
+        List<Object[]> rows         = repo.countByCategoryMonthly(fromDate);
+        List<Object[]> severityRows = repo.countByCategoryAndSeverityMonthly(fromDate);
 
-        // Build a sorted map: "May 2025" → { categoryName → count }
-        // Use LinkedHashMap to preserve chronological order
+        // Build severity pivot: "May 2025||EMERGENCY" → { CRITICAL→n, ... }
+        // Key = "monthLabel||categoryName"
+        Map<String, Map<String, Long>> severityPivot = new LinkedHashMap<>();
+        for (Object[] row : severityRows) {
+            int    year     = ((Number) row[0]).intValue();
+            int    month    = ((Number) row[1]).intValue();
+            String cat      = (String) row[2];
+            String severity = row[3] != null ? ((String) row[3]).toUpperCase() : "UNKNOWN";
+            long   count    = ((Number) row[4]).longValue();
+
+            String label    = Month.of(month).getDisplayName(TextStyle.FULL, Locale.ENGLISH) + " " + year;
+            String pivotKey = label + "||" + cat;
+
+            severityPivot.computeIfAbsent(pivotKey, k -> {
+                Map<String, Long> m = new LinkedHashMap<>();
+                SEVERITY_KEYS.forEach(s -> m.put(s, 0L));
+                return m;
+            }).merge(severity, count, Long::sum);
+        }
+
+        // ── rest of the existing month/category map building is unchanged ──────────
+
         Map<String, Map<String, Long>> monthMap = new LinkedHashMap<>();
-
-        // Pre-populate all 12 months so months with zero data still appear
         for (int i = 11; i >= 0; i--) {
             YearMonth ym = YearMonth.now().minusMonths(i);
-            String label = ym.getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH)
-                    + " " + ym.getYear();
+            String label = ym.getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH) + " " + ym.getYear();
             monthMap.putIfAbsent(label, new LinkedHashMap<>());
         }
 
-        // Collect all unique category names for consistent colours
         Set<String> allCategories = new LinkedHashSet<>();
-        for (Object[] row : rows) {
-            allCategories.add((String) row[2]);
-        }
+        for (Object[] row : rows) allCategories.add((String) row[2]);
 
-        // Assign a fixed colour per category
         Map<String, String> categoryColour = new LinkedHashMap<>();
         int ci = 0;
         for (String cat : allCategories) {
@@ -151,33 +183,32 @@ public class KavachAlertDashboardService {
             ci++;
         }
 
-        // Fill month → category → count
         for (Object[] row : rows) {
-            int year     = ((Number) row[0]).intValue();
-            int month    = ((Number) row[1]).intValue();
+            int    year  = ((Number) row[0]).intValue();
+            int    month = ((Number) row[1]).intValue();
             String cat   = (String) row[2];
-            long  count  = ((Number) row[3]).longValue();
-
-            String label = Month.of(month).getDisplayName(TextStyle.FULL, Locale.ENGLISH)
-                    + " " + year;
-            monthMap.computeIfAbsent(label, k -> new LinkedHashMap<>())
-                    .put(cat, count);
+            long   count = ((Number) row[3]).longValue();
+            String label = Month.of(month).getDisplayName(TextStyle.FULL, Locale.ENGLISH) + " " + year;
+            monthMap.computeIfAbsent(label, k -> new LinkedHashMap<>()).put(cat, count);
         }
 
-        // Build final response list
         List<Map<String, Object>> result = new ArrayList<>();
         for (Map.Entry<String, Map<String, Long>> entry : monthMap.entrySet()) {
+            String monthLabel = entry.getKey();
             Map<String, Object> monthEntry = new LinkedHashMap<>();
-            monthEntry.put("month", entry.getKey());
+            monthEntry.put("month", monthLabel);
 
             List<Map<String, Object>> barList = new ArrayList<>();
             for (String cat : allCategories) {
                 long count = entry.getValue().getOrDefault(cat, 0L);
+                String pivotKey = monthLabel + "||" + cat;
+
                 Map<String, Object> bar = new LinkedHashMap<>();
                 bar.put("name",      cat);
                 bar.put("value",     (double) count);
                 bar.put("label",     String.valueOf(count));
                 bar.put("colorCode", categoryColour.get(cat));
+                bar.put("severity",  severityPivot.getOrDefault(pivotKey, defaultSeverityMap()));
                 barList.add(bar);
             }
             monthEntry.put("barGraphDataSetList", barList);
@@ -204,6 +235,34 @@ public class KavachAlertDashboardService {
         m.put("name",      name);
         m.put("count",     count);
         m.put("colorCode", null);
+        return m;
+    }
+
+
+
+    /**
+     * Builds a pivot map: groupKey → { "CRITICAL" → n, "WARNING" → n, ... }
+     * Each Object[] row is expected as: [groupKey, severity, count]
+     */
+    private Map<String, Map<String, Long>> buildSeverityPivot(List<Object[]> rows) {
+        Map<String, Map<String, Long>> pivot = new LinkedHashMap<>();
+        for (Object[] row : rows) {
+            String groupKey  = String.valueOf(row[0]);
+            String severity  = row[1] != null ? ((String) row[1]).toUpperCase() : "UNKNOWN";
+            long   count     = ((Number) row[2]).longValue();
+
+            pivot.computeIfAbsent(groupKey, k -> {
+                // Pre-populate all known severity levels with 0
+                Map<String, Long> m = new LinkedHashMap<>();
+                SEVERITY_KEYS.forEach(s -> m.put(s, 0L));
+                return m;
+            }).merge(severity, count, Long::sum);
+        }
+        return pivot;
+    }
+    private Map<String, Long> defaultSeverityMap() {
+        Map<String, Long> m = new LinkedHashMap<>();
+        SEVERITY_KEYS.forEach(s -> m.put(s, 0L));
         return m;
     }
 }

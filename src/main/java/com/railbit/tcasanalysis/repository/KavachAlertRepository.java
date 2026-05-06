@@ -259,4 +259,15 @@ WHERE (:from IS NULL OR ka.event_time >= :from)
     @Transactional
     @Query(value = "UPDATE kavach_alert_details SET is_assigned_notified = true WHERE kavach_alert_id IN :alertIds", nativeQuery = true)
     int markAllAssignedNotified(@Param("alertIds") List<Long> alertIds);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE KavachAlert k SET k.isPopupDialogAck = true WHERE k.id = :id")
+    int markAssignedPopupNotified(@Param("id") Long id);
+
+    // Bulk alert update
+    @Modifying
+    @Transactional
+    @Query("UPDATE KavachAlert k SET k.isPopupDialogAck = true WHERE k.id IN :ids")
+    int markAllAssignedPopupNotified(@Param("ids") List<Long> ids);
 }

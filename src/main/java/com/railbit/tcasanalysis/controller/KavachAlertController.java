@@ -319,4 +319,34 @@ public class KavachAlertController {
                     Map.of("status", "error", "message", e.getMessage()));
         }
     }
+
+    @PatchMapping("/{id}/assigned-popup-notify")
+    public ResponseEntity<?> markAssignedPopupNotified(@PathVariable Long id) {
+        try {
+            int updated = alertRepository.markAssignedPopupNotified(id);
+            if (updated == 0) {
+                return ResponseEntity.notFound().build();
+            }
+            return ResponseEntity.ok(Map.of(
+                    "status", "success",
+                    "message", "Alert marked as assigned-notified"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(
+                    Map.of("status", "error", "message", e.getMessage()));
+        }
+    }
+
+    // Bulk — mark multiple alerts assigned-notified
+    @PatchMapping("/assigned-popup-notify-batch")
+    public ResponseEntity<?> markBatchAssignedPopupNotified(@RequestBody List<Long> alertIds) {
+        try {
+            int updated = alertRepository.markAllAssignedPopupNotified(alertIds);
+            return ResponseEntity.ok(Map.of(
+                    "status", "success",
+                    "updated", updated));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(
+                    Map.of("status", "error", "message", e.getMessage()));
+        }
+    }
 }
