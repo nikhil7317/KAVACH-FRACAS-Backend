@@ -46,14 +46,14 @@ public class KavachAlertDashboardService {
     public List<Map<String, Object>> getDashboardCountCards(Date fromDate, Date toDate, Integer divisionId) {
         Date adjustedTo = endOfDay(toDate);
 
-        long total = repo.countAlertsInRange(fromDate, adjustedTo, divisionId);
-        long criticalAlerts = repo.countCriticalAlertsInRange(fromDate, adjustedTo, divisionId);
+        long total = repo.countAlertsInRange(fromDate, adjustedTo);
+        long criticalAlerts = repo.countCriticalAlertsInRange(fromDate, adjustedTo);
 
 
-        long withTicket    = repo.countAlertsWithTicketInRange(fromDate, adjustedTo, divisionId);
+        long withTicket    = repo.countAlertsWithTicketInRange(fromDate, adjustedTo);
         long withoutTicket = total - withTicket;
-        long openTickets   = repo.countOpenTicketsInRange(fromDate, adjustedTo, divisionId);
-        long closedTickets = repo.countClosedTicketsInRange(fromDate, adjustedTo, divisionId);
+        long openTickets   = repo.countOpenTicketsInRange(fromDate, adjustedTo);
+        long closedTickets = repo.countClosedTicketsInRange(fromDate, adjustedTo);
         long uniqueTickets = openTickets + closedTickets;
 
         return List.of(
@@ -71,7 +71,7 @@ public class KavachAlertDashboardService {
 
     public List<Map<String, Object>> getAlertsLocoWise(Date fromDate, Date toDate,Integer divisionId) {
         Date to = endOfDay(toDate);
-        List<Object[]> rows         = repo.countByLocoId(fromDate, to,divisionId);
+        List<Object[]> rows         = repo.countByLocoId(fromDate, to);
         Map<String, Map<String, Long>> severityPivot =
                 buildSeverityPivot(repo.countByLocoIdAndSeverity(fromDate, to));
 
@@ -94,9 +94,9 @@ public class KavachAlertDashboardService {
 
     public List<Map<String, Object>> getAlertsCategoryWise(Date fromDate, Date toDate ,Integer divisionId) {
         Date to = endOfDay(toDate);
-        List<Object[]> rows         = repo.countByAlertCategory(fromDate, to, divisionId);
+        List<Object[]> rows         = repo.countByAlertCategory(fromDate, to);
         Map<String, Map<String, Long>> severityPivot =
-                buildSeverityPivot(repo.countByAlertCategoryAndSeverity(fromDate, to, divisionId));
+                buildSeverityPivot(repo.countByAlertCategoryAndSeverity(fromDate, to));
 
         List<Map<String, Object>> result = new ArrayList<>();
         int colourIdx = 0;
@@ -117,7 +117,7 @@ public class KavachAlertDashboardService {
 
     public List<Map<String, Object>> getAlertsStationWise(Date fromDate, Date toDate,Integer divisionId) {
         Date to = endOfDay(toDate);
-        List<Object[]> rows         = repo.countByStationId(fromDate, to,divisionId);
+        List<Object[]> rows         = repo.countByStationId(fromDate, to);
         Map<String, Map<String, Long>> severityPivot =
                 buildSeverityPivot(repo.countByStationIdAndSeverity(fromDate, to));
 
@@ -147,10 +147,10 @@ public class KavachAlertDashboardService {
         Date fromDate = java.sql.Date.valueOf(firstDayOf12MonthsAgo);
 
         List<Object[]> rows =
-                repo.countByCategoryMonthly(fromDate, divisionId);
+                repo.countByCategoryMonthly(fromDate);
 
         List<Object[]> severityRows =
-                repo.countByCategoryAndSeverityMonthly(fromDate, divisionId);
+                repo.countByCategoryAndSeverityMonthly(fromDate);
 
         // Build severity pivot
         Map<String, Map<String, Long>> severityPivot =

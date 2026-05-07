@@ -59,7 +59,7 @@ public interface KavachAlertRepository extends JpaRepository<KavachAlert, Long> 
             @Param("from") Date from, @Param("to") Date to,
             @Param("category") String category);
 
-    // All filters
+
     // All filters
     @Query(
             value = """

@@ -34,6 +34,10 @@ public class Asset implements Serializable {
     private String location;
     private String latitude;
     private String longitude;
+    //
+    @Column(name = "tower_height")
+    private String towerHeight;
+
     private String doc;
     private String codalLife;
     private String warrantyPeriod;
