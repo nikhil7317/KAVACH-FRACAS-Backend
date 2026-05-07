@@ -37,12 +37,19 @@ public class KavachAlertDashboardController {
     public ResponseEntity<Map<String, Object>> getDashboardCountCards(
             @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") Date fromDate,
             @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") Date toDate,
-            @RequestParam(required = false) Integer divisionId) {
-        if (divisionId == null) {
-            divisionId = 1;
+            @RequestParam(required = false) String divisionId) {
+        int divId=1;
+        if (divisionId == null || divisionId.isEmpty() || divisionId.equalsIgnoreCase("All")) {
+            divId = 1;
+        }else{
+            try{
+                divId = Integer.parseInt(divisionId);
+            } catch (Exception e) {
+                divId=1;
+            }
         }
 
-        return ResponseEntity.ok(buildResponse(dashboardService.getDashboardCountCards(fromDate, toDate, divisionId)));
+        return ResponseEntity.ok(buildResponse(dashboardService.getDashboardCountCards(fromDate, toDate, divId)));
     }
 
     /**
@@ -53,11 +60,18 @@ public class KavachAlertDashboardController {
     public ResponseEntity<Map<String, Object>> getAlertsLocoWise(
             @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") Date fromDate,
             @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") Date toDate,
-            @RequestParam Integer divisionId) {
-        if (divisionId == null) {
-            divisionId = 1;
+            @RequestParam String divisionId) {
+        int divId=1;
+        if (divisionId == null || divisionId.isEmpty() || divisionId.equalsIgnoreCase("All")) {
+            divId = 1;
+        }else{
+            try{
+                divId = Integer.parseInt(divisionId);
+            } catch (Exception e) {
+                divId=1;
+            }
         }
-        return ResponseEntity.ok(buildResponse(dashboardService.getAlertsLocoWise(fromDate, toDate,divisionId)));
+        return ResponseEntity.ok(buildResponse(dashboardService.getAlertsLocoWise(fromDate, toDate,divId)));
     }
 
     /**
@@ -68,12 +82,19 @@ public class KavachAlertDashboardController {
     public ResponseEntity<Map<String, Object>> getAlertsCategoryWise(
             @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") Date fromDate,
             @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") Date toDate,
-            @RequestParam(required = false) Integer divisionId) {
-        if (divisionId == null) {
-            divisionId = 1;
+            @RequestParam String divisionId) {
+        int divId=1;
+        if (divisionId == null || divisionId.isEmpty() || divisionId.equalsIgnoreCase("All")) {
+            divId = 1;
+        }else{
+            try{
+                divId = Integer.parseInt(divisionId);
+            } catch (Exception e) {
+                divId=1;
+            }
         }
 
-        return ResponseEntity.ok(buildResponse(dashboardService.getAlertsCategoryWise(fromDate, toDate, divisionId)));
+        return ResponseEntity.ok(buildResponse(dashboardService.getAlertsCategoryWise(fromDate, toDate, divId)));
     }
 
     /**
@@ -84,11 +105,18 @@ public class KavachAlertDashboardController {
     public ResponseEntity<Map<String, Object>> getAlertsStationWise(
             @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") Date fromDate,
             @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") Date toDate,
-            @RequestParam Integer divisionId) {
-        if (divisionId == null) {
-            divisionId = 1;
+            @RequestParam String divisionId) {
+        int divId=1;
+        if (divisionId == null || divisionId.isEmpty() || divisionId.equalsIgnoreCase("All")) {
+            divId = 1;
+        }else{
+            try{
+                divId = Integer.parseInt(divisionId);
+            } catch (Exception e) {
+                divId=1;
+            }
         }
-        return ResponseEntity.ok(buildResponse(dashboardService.getAlertsStationWise(fromDate, toDate,divisionId)));
+        return ResponseEntity.ok(buildResponse(dashboardService.getAlertsStationWise(fromDate, toDate,divId)));
     }
 
     /**
@@ -97,16 +125,22 @@ public class KavachAlertDashboardController {
      */
     @GetMapping("/analysis/getCategoryWiseYearlyGraphData")
     public ResponseEntity<Map<String, Object>> getCategoryWiseYearlyGraphData(
-            @RequestParam(required = false) Integer divisionId) {
+            @RequestParam(required = false) String divisionId) {
 
-        // Default divisionId = 1
-        if (divisionId == null) {
-            divisionId = 1;
+        int divId=1;
+        if (divisionId == null || divisionId.isEmpty() || divisionId.equalsIgnoreCase("All")) {
+            divId = 1;
+        }else{
+            try{
+                divId = Integer.parseInt(divisionId);
+            } catch (Exception e) {
+                divId=1;
+            }
         }
 
         return ResponseEntity.ok(
                 buildResponse(
-                        dashboardService.getCategoryWiseYearlyGraphData(divisionId)
+                        dashboardService.getCategoryWiseYearlyGraphData(divId)
                 )
         );
     }

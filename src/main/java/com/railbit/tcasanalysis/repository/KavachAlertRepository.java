@@ -60,6 +60,7 @@ public interface KavachAlertRepository extends JpaRepository<KavachAlert, Long> 
             @Param("category") String category);
 
     // All filters
+    // All filters
     @Query(
             value = """
 SELECT ka.id,
@@ -104,7 +105,15 @@ WHERE (:from IS NULL OR ka.event_time >= :from)
   AND (:category IS NULL OR ka.alert_category = :category)
   AND (
         :ticketStatus IS NULL
-        OR UPPER(kad.ticket_status) = UPPER(:ticketStatus)
+        OR (
+            UPPER(:ticketStatus) = 'TICKETASSIGNED'
+            AND kad.ticket_status IS NOT NULL
+            AND kad.ticket_status <> ''
+        )
+        OR (
+            UPPER(:ticketStatus) <> 'TICKETASSIGNED'
+            AND UPPER(COALESCE(kad.ticket_status, '')) = UPPER(:ticketStatus)
+        )
       )
   AND NOT EXISTS (
       SELECT 1 FROM alert_message_config amc
@@ -136,7 +145,15 @@ WHERE (:from IS NULL OR ka.event_time >= :from)
   AND (:category IS NULL OR ka.alert_category = :category)
   AND (
         :ticketStatus IS NULL
-        OR UPPER(kad.ticket_status) = UPPER(:ticketStatus)
+        OR (
+            UPPER(:ticketStatus) = 'TICKETASSIGNED'
+            AND kad.ticket_status IS NOT NULL
+            AND kad.ticket_status <> ''
+        )
+        OR (
+            UPPER(:ticketStatus) <> 'TICKETASSIGNED'
+            AND UPPER(COALESCE(kad.ticket_status, '')) = UPPER(:ticketStatus)
+        )
       )
   AND NOT EXISTS (
       SELECT 1 FROM alert_message_config amc
