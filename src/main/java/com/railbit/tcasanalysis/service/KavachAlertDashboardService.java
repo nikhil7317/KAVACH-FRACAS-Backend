@@ -46,47 +46,79 @@ public class KavachAlertDashboardService {
     public List<Map<String, Object>> getDashboardCountCards(Date fromDate, Date toDate, Integer divisionId) {
         Date adjustedTo = endOfDay(toDate);
 
-        long total = repo.countAlertsInRange(fromDate, adjustedTo);
+        long total         = repo.countAlertsInRange(fromDate, adjustedTo);
         long criticalAlerts = repo.countCriticalAlertsInRange(fromDate, adjustedTo);
 
+        // Single query for all ticket stats
+        List<Object[]> ticketStatRows = repo.getTicketStatsSingleQuery(fromDate, adjustedTo);
+        Object[] ticketStats = (ticketStatRows != null && !ticketStatRows.isEmpty())
+                ? ticketStatRows.get(0)
+                : new Object[]{0L, 0L, 0L};
 
-        long withTicket    = repo.countAlertsWithTicketInRange(fromDate, adjustedTo);
-        long withoutTicket = total - withTicket;
-        long openTickets   = repo.countOpenTicketsInRange(fromDate, adjustedTo);
-        long closedTickets = repo.countClosedTicketsInRange(fromDate, adjustedTo);
-        long uniqueTickets = openTickets + closedTickets;
+        long uniqueTickets = ticketStats[0] != null ? ((Number) ticketStats[0]).longValue() : 0L;
+        long openTickets   = ticketStats[1] != null ? ((Number) ticketStats[1]).longValue() : 0L;
+        long closedTickets = ticketStats[2] != null ? ((Number) ticketStats[2]).longValue() : 0L;
 
         return List.of(
-                card("Total Incidents",                       total),
-                card("Critical Alerts",                       criticalAlerts),  // NEW
-                card("Incidents Without Attached Ticket",     withoutTicket),
-                card("Incidents With Attached Ticket",        withTicket),
-                card("Tickets Generated",        uniqueTickets),
-                card("Open Tickets",                   openTickets),
-                card("Closed Tickets",                 closedTickets)
+                card("Total Incidents",    total),
+                card("Critical Alerts",    criticalAlerts),
+                card("Tickets Generated",  uniqueTickets),   // now counts ALL statuses (OPEN, CLOSE, RE-ASSIGN, etc.)
+                card("Open Tickets",       openTickets),
+                card("Closed Tickets",     closedTickets),
+                card("Loco Movement",      0L)               // placeholder — logic TBD
         );
     }
 
     // ── 3. Loco-wise counts ────────────────────────────────────────────────────
 
-    public List<Map<String, Object>> getAlertsLocoWise(Date fromDate, Date toDate,Integer divisionId) {
+    public List<Map<String, Object>> getAlertsLocoWise(
+            Date fromDate,
+            Date toDate,
+            Integer divisionId) {
+
         Date to = endOfDay(toDate);
-        List<Object[]> rows         = repo.countByLocoId(fromDate, to);
+
+        List<Object[]> rows =
+                repo.countByLocoId(fromDate, to);
+
         Map<String, Map<String, Long>> severityPivot =
-                buildSeverityPivot(repo.countByLocoIdAndSeverity(fromDate, to));
+                buildSeverityPivot(
+                        repo.countByLocoIdAndSeverity(fromDate, to));
 
         List<Map<String, Object>> result = new ArrayList<>();
-        int colourIdx = 0;
+
         for (Object[] row : rows) {
-            String key = String.valueOf(row[0]);
+
+            String locoId = String.valueOf(row[0]);
+
+            Long total = ((Number) row[1]).longValue();
+
+            Map<String, Long> severity =
+                    severityPivot.getOrDefault(
+                            locoId,
+                            defaultSeverityMap());
+
             Map<String, Object> item = new LinkedHashMap<>();
-            item.put("name",      key);
-            item.put("count",     ((Number) row[1]).longValue());
-            item.put("colorCode", PALETTE.get(colourIdx % PALETTE.size()));
-            item.put("severity",  severityPivot.getOrDefault(key, defaultSeverityMap()));
+
+            item.put("locoId", locoId);
+
+            item.put("CRITICAL",
+                    severity.getOrDefault("CRITICAL", 0L));
+
+            item.put("WARNING",
+                    severity.getOrDefault("WARNING", 0L));
+
+            item.put("MEDIUM",
+                    severity.getOrDefault("MEDIUM", 0L));
+
+            item.put("INFO",
+                    severity.getOrDefault("INFO", 0L));
+
+            item.put("TOTAL", total);
+
             result.add(item);
-            colourIdx++;
         }
+
         return result;
     }
 

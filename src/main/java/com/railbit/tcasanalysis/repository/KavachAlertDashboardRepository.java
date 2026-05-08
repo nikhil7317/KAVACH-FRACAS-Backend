@@ -256,4 +256,33 @@ public interface KavachAlertDashboardRepository extends JpaRepository<KavachAler
         ORDER BY YEAR(ka.event_time), MONTH(ka.event_time), ka.alert_category, ka.severity
         """, nativeQuery = true)
     List<Object[]> countByCategoryAndSeverityMonthly(@Param("fromDate") Date fromDate);
+
+    // KavachAlertDashboardRepository.java
+
+// REMOVE these 3 queries:
+// countAlertsWithTicketInRange(...)
+// countOpenTicketsInRange(...)
+// countClosedTicketsInRange(...)
+
+// ADD these 3 optimized queries:
+
+    @Query(value = """
+    SELECT
+        COUNT(DISTINCT kad.ticket_no)                                                                    AS total_tickets,
+        COUNT(DISTINCT CASE WHEN UPPER(kad.ticket_status) = 'OPEN'              THEN kad.ticket_no END) AS open_tickets,
+        COUNT(DISTINCT CASE WHEN UPPER(kad.ticket_status) IN ('CLOSED','CLOSE') THEN kad.ticket_no END) AS closed_tickets
+    FROM kavach_alert_details kad
+    INNER JOIN kavach_alert ka ON ka.id = kad.kavach_alert_id
+    WHERE ka.event_time >= :fromDate AND ka.event_time < :toDate
+      AND kad.ticket_no IS NOT NULL AND kad.ticket_no <> ''
+      AND NOT EXISTS (
+          SELECT 1 FROM alert_message_config amc
+          WHERE amc.enabled = false
+            AND amc.alert_category = ka.alert_category
+            AND amc.alert_message  = ka.alert_message
+      )
+    """, nativeQuery = true)
+    List<Object[]> getTicketStatsSingleQuery(@Param("fromDate") Date fromDate,   // <-- List<Object[]>
+                                             @Param("toDate") Date toDate);
+
 }
