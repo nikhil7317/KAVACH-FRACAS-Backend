@@ -86,7 +86,7 @@ public class KavachAlertDetailsController {
     @GetMapping("/today-count")
     public ResponseEntity<?> getTodayCount() {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yy");
-        String prefix = "PYG/" + LocalDate.now().format(formatter) + "/";
+        String prefix = "PRYJ/" + LocalDate.now().format(formatter) + "/";
         long count = alertDetailsRepo.countByTicketNoStartingWith(prefix);
         return ResponseEntity.ok(Map.of("count", count));
     }
