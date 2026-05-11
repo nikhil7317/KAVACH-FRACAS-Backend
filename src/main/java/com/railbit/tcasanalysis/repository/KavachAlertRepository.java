@@ -287,4 +287,93 @@ WHERE (:from IS NULL OR ka.event_time >= :from)
     @Transactional
     @Query("UPDATE KavachAlert k SET k.isPopupDialogAck = true WHERE k.id IN :ids")
     int markAllAssignedPopupNotified(@Param("ids") List<Long> ids);
+
+
+    @Query(value = """
+            SELECT
+                a.loco_id        AS locoId,
+                a.last_rfid_tag  AS lastRfidTag,
+                a.event_time     AS eventTime,
+                grp.grp_count    AS groupCount
+            FROM kavach_alert a
+ 
+            JOIN (
+                SELECT
+                    loco_id,
+                    last_rfid_tag,
+                    COUNT(*)         AS grp_count,
+                    MIN(event_time)  AS first_tag_time
+                FROM kavach_alert
+                WHERE last_rfid_tag IS NOT NULL
+                  AND (:locoId      IS NULL OR loco_id      = :locoId)
+                  AND (:lastRfidTag IS NULL OR last_rfid_tag = :lastRfidTag)
+                  AND (:fromDate    IS NULL OR event_time   >= :fromDate)
+                  AND (:toDate      IS NULL OR event_time   <= :toDate)
+                GROUP BY loco_id, last_rfid_tag
+                HAVING COUNT(*) > 1
+            ) grp
+                ON  grp.loco_id       = a.loco_id
+                AND grp.last_rfid_tag = a.last_rfid_tag
+ 
+            JOIN (
+                SELECT loco_id, MIN(event_time) AS first_loco_time
+                FROM kavach_alert
+                WHERE last_rfid_tag IS NOT NULL
+                  AND (:locoId      IS NULL OR loco_id      = :locoId)
+                  AND (:lastRfidTag IS NULL OR last_rfid_tag = :lastRfidTag)
+                  AND (:fromDate    IS NULL OR event_time   >= :fromDate)
+                  AND (:toDate      IS NULL OR event_time   <= :toDate)
+                GROUP BY loco_id
+            ) loco_min ON loco_min.loco_id = a.loco_id
+ 
+            WHERE a.last_rfid_tag IS NOT NULL
+              AND (:locoId      IS NULL OR a.loco_id      = :locoId)
+              AND (:lastRfidTag IS NULL OR a.last_rfid_tag = :lastRfidTag)
+              AND (:fromDate    IS NULL OR a.event_time   >= :fromDate)
+              AND (:toDate      IS NULL OR a.event_time   <= :toDate)
+ 
+            ORDER BY
+                loco_min.first_loco_time ASC,
+                a.loco_id                ASC,
+                grp.first_tag_time       ASC,
+                a.last_rfid_tag          ASC,
+                a.event_time             ASC
+            """, nativeQuery = true)
+    List<Object[]> findRepeatedRFIDRows(
+            @Param("locoId")      Integer locoId,
+            @Param("lastRfidTag") Integer lastRfidTag,
+            @Param("fromDate")    Date    fromDate,
+            @Param("toDate")      Date    toDate
+    );
+
+    /** REPEATED RFID REPORT */
+    @Query(value = """
+            SELECT COUNT(*)
+            FROM kavach_alert a
+            JOIN (
+                SELECT loco_id, last_rfid_tag
+                FROM kavach_alert
+                WHERE last_rfid_tag IS NOT NULL
+                  AND (:locoId      IS NULL OR loco_id      = :locoId)
+                  AND (:lastRfidTag IS NULL OR last_rfid_tag = :lastRfidTag)
+                  AND (:fromDate    IS NULL OR event_time   >= :fromDate)
+                  AND (:toDate      IS NULL OR event_time   <= :toDate)
+                GROUP BY loco_id, last_rfid_tag
+                HAVING COUNT(*) > 1
+            ) grp
+                ON  grp.loco_id       = a.loco_id
+                AND grp.last_rfid_tag = a.last_rfid_tag
+            WHERE a.last_rfid_tag IS NOT NULL
+              AND (:locoId      IS NULL OR a.loco_id      = :locoId)
+              AND (:lastRfidTag IS NULL OR a.last_rfid_tag = :lastRfidTag)
+              AND (:fromDate    IS NULL OR a.event_time   >= :fromDate)
+              AND (:toDate      IS NULL OR a.event_time   <= :toDate)
+            """, nativeQuery = true)
+    long countRepeatedRFIDRows(
+            @Param("locoId")      Integer locoId,
+            @Param("lastRfidTag") Integer lastRfidTag,
+            @Param("fromDate")    Date    fromDate,
+            @Param("toDate")      Date    toDate
+    );
+
 }
