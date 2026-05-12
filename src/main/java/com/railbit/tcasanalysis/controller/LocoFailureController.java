@@ -36,14 +36,13 @@ public class LocoFailureController {
     @GetMapping
     public ResponseEntity<Page<LocoFailureListDTO>> getAll(
             @RequestParam(required = false) Integer locoId,
-            @RequestParam(required = false) LocalDate fromDate,
-            @RequestParam(required = false) LocalDate toDate,
+            @RequestParam(required = false) String fromDate,
+            @RequestParam(required = false) String toDate,
             @RequestParam(required = false) String severity,
             @RequestParam(required = false) String ticketStatus,
             @RequestParam(required = false) String ticketNo,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-
         return ResponseEntity.ok(service.getAllLocoFailures(
                 locoId, fromDate, toDate, severity, ticketStatus, ticketNo, page, size));
     }

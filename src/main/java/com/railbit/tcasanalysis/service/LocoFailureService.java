@@ -111,13 +111,21 @@ public class LocoFailureService {
         return dto;
     }
 
-    @Transactional(readOnly = true)
-    public Page<LocoFailureListDTO> getAllLocoFailures(Integer locoId, LocalDate fromDate, LocalDate toDate,
+    public Page<LocoFailureListDTO> getAllLocoFailures(Integer locoId, String fromDate, String toDate,
                                                        String severity, String ticketStatus, String ticketNo,
                                                        int page, int size) {
 
-        LocalDateTime fromDateTime = fromDate != null ? fromDate.atStartOfDay() : null;
-        LocalDateTime toDateTime = toDate != null ? toDate.atTime(LocalTime.MAX) : null;
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+        LocalDateTime fromDateTime = null;
+        LocalDateTime toDateTime = null;
+
+        if (fromDate != null && !fromDate.isEmpty()) {
+            fromDateTime = LocalDateTime.parse(fromDate, formatter);
+        }
+        if (toDate != null && !toDate.isEmpty()) {
+            toDateTime = LocalDateTime.parse(toDate, formatter);
+        }
 
         Page<LocoFailure> entityPage = locoFailureRepository.findAllWithFilters(
                 locoId, fromDateTime, toDateTime, severity, ticketStatus, ticketNo,
