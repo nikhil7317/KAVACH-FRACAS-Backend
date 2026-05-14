@@ -44,8 +44,8 @@ public class LocoFailureService {
                 userRepository.findById(((Number) request.get("assignedToId")).longValue())
                         .orElseThrow(() -> new RuntimeException("AssignedTo user not found"))
         );
-        locoFailure.setTicketNo(request.get("ticketNo") != null ? (String) request.get("ticketNo") : generateTicketNo());
-        locoFailure.setTicketStatus(request.get("ticketStatus") != null ? (String) request.get("ticketStatus") : "OPEN");
+        locoFailure.setTicketNo((String) request.get("ticketNo"));
+        locoFailure.setTicketStatus((String) request.get("ticketStatus"));
         locoFailure.setSeverity((String) request.get("severity"));
 
         LocoFailure saved = locoFailureRepository.save(locoFailure);
@@ -112,7 +112,7 @@ public class LocoFailureService {
     }
 
     public Page<LocoFailureListDTO> getAllLocoFailures(Integer locoId, String fromDate, String toDate,
-                                                       String severity, String ticketStatus, String ticketNo,
+                                                       String severity, String ticketStatus, String ticketNo, Integer userId,
                                                        int page, int size) {
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -128,7 +128,7 @@ public class LocoFailureService {
         }
 
         Page<LocoFailure> entityPage = locoFailureRepository.findAllWithFilters(
-                locoId, fromDateTime, toDateTime, severity, ticketStatus, ticketNo,
+                locoId, fromDateTime, toDateTime, severity, ticketStatus, ticketNo, userId,
                 PageRequest.of(page, size));
 
         return entityPage.map(this::mapToListDTO);
@@ -164,9 +164,4 @@ public class LocoFailureService {
         return dto;
     }
 
-    private String generateTicketNo() {
-        String datePrefix = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        String uuid = UUID.randomUUID().toString().substring(0, 6).toUpperCase();
-        return "LF-" + datePrefix + "-" + uuid;
-    }
 }

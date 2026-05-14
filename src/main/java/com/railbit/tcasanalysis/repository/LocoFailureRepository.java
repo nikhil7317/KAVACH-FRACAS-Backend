@@ -12,14 +12,16 @@ import java.time.LocalDateTime;
 
 @Repository
 public interface LocoFailureRepository extends JpaRepository<LocoFailure, Long> {
-    long countByTicketNoStartingWith(String prefix);
+    long countByTicketNoContaining(String datePart);
     @Query("SELECT lf FROM LocoFailure lf WHERE " +
             "(:locoId IS NULL OR lf.locoId = :locoId) AND " +
             "(:fromDate IS NULL OR lf.incidentCreatedAt >= :fromDate) AND " +
             "(:toDate IS NULL OR lf.incidentCreatedAt <= :toDate) AND " +
             "(:severity IS NULL OR lf.severity = :severity) AND " +
             "(:ticketStatus IS NULL OR lf.ticketStatus = :ticketStatus) AND " +
-            "(:ticketNo IS NULL OR LOWER(lf.ticketNo) LIKE LOWER(CONCAT('%', :ticketNo, '%'))) " +
+            "(:ticketNo IS NULL OR LOWER(lf.ticketNo) LIKE LOWER(CONCAT('%', :ticketNo, '%'))) AND " +
+            "(:userId IS NULL OR " +
+            "(lf.assignedTo.id = :userId AND lf.ticketStatus IN ('OPEN', 'RE-ASSIGN', 'REASSIGN'))) " +
             "ORDER BY lf.incidentCreatedAt DESC")
     Page<LocoFailure> findAllWithFilters(
             @Param("locoId") Integer locoId,
@@ -28,5 +30,6 @@ public interface LocoFailureRepository extends JpaRepository<LocoFailure, Long> 
             @Param("severity") String severity,
             @Param("ticketStatus") String ticketStatus,
             @Param("ticketNo") String ticketNo,
+            @Param("userId") Integer userId,
             Pageable pageable);
 }

@@ -41,16 +41,21 @@ public class LocoFailureController {
             @RequestParam(required = false) String severity,
             @RequestParam(required = false) String ticketStatus,
             @RequestParam(required = false) String ticketNo,
+            @RequestParam(required = false) Integer userId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         return ResponseEntity.ok(service.getAllLocoFailures(
-                locoId, fromDate, toDate, severity, ticketStatus, ticketNo, page, size));
+                locoId, fromDate, toDate, severity, ticketStatus, ticketNo, userId, page, size));
     }
     @GetMapping("/today-count")
-    public ResponseEntity<?> getTodayCount(@RequestParam Integer locoId) {
+    public ResponseEntity<?> getTodayCount() {
+
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yy");
-        String prefix = "PRYJ/" + locoId + "/" + LocalDate.now().format(formatter) + "/";
-        long count = locoFailureRepository.countByTicketNoStartingWith(prefix);
+
+        String datePart = "/" + LocalDate.now().format(formatter) + "/";
+
+        long count = locoFailureRepository.countByTicketNoContaining(datePart);
+
         return ResponseEntity.ok(Map.of("count", count));
     }
 }
